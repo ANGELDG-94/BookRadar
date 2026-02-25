@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<!-- BUSCADOR PRINCIPAL -->
+<section class="hero-section">
+    <h1 class="hero-title">Encuentra tu próxima aventura</h1>
+    <div class="search-container">
+        <input type="text" class="search-input" placeholder="Título, autor o género...">
+        <button class="search-btn">Buscar</button>
+    </div>
+</section>
+
+<!-- SECCIÓN DE RECOMENDADOS (DEMO VISUAL) -->
+<div class="content-wrapper">
+    <h2 class="section-title">Tendencias en Ciencia Ficción</h2>
+
+    <div class="books-grid">
+        <!-- Libro 1 -->
+        <article class="book-card">
+            <img src="https://books.google.com/books/content?id=spHCDgAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api" alt="Dune" class="book-cover">
+            <div class="book-info">
+                <h3 class="book-title">Herejes de Dune</h3>
+                <p class="book-author">Frank Herbert</p>
+            </div>
+        </article>
+
+        <!-- Libro 2 -->
+        <article class="book-card">
+            <img src="https://books.google.com/books/content?id=zyTCAlFPjgYC&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api" alt="El Archivo" class="book-cover">
+            <div class="book-info">
+                <h3 class="book-title">El Imperio Final</h3>
+                <p class="book-author">Brandon Sanderson</p>
+            </div>
+        </article>
+
+        <!-- Libro 3 -->
+        <article class="book-card">
+            <div class="book-cover" style="display:flex;align-items:center;justify-content:center;color:#94a3b8;">Sin Portada</div>
+            <div class="book-info">
+                <h3 class="book-title">Libro de Ejemplo</h3>
+                <p class="book-author">Autor Desconocido</p>
+            </div>
+        </article>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,26 @@
+Entornos virtuales de Python
+
+.venv/
+venv/
+env/
+
+Archivos compilados y caché de Python
+
+pycache/
+*.pyc
+*.pyo
+*.pyd
+
+Archivos de configuración de IntelliJ IDEA
+
+.idea/
+*.iml
+
+Archivos con contraseñas o variables de entorno (por si lo usas en el futuro)
+
+.env
+
+Archivos del sistema operativo
+
+.DS_Store
+Thumbs.db

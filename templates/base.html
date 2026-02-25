@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BookRadar 📡</title>
+
+    <!-- 1. Enlace al CSS (Usa url_for para que Flask encuentre el archivo) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <!-- 2. Tipografía 'Inter' de Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- 3. BARRA DE NAVEGACIÓN (Se repite en todas las páginas) -->
+<header class="app-header">
+    <div class="logo">
+        <!-- Carga el logo desde static/img/logo.png -->
+        <!-- AÑADIDO: style="height: 40px..." para evitar que salga gigante -->
+        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo" class="logo-img" style="height: 40px; width: auto;">
+        <span>BookRadar</span>
+    </div>
+    <nav class="main-nav">
+        <a href="#" class="nav-link">Acceder</a>
+    </nav>
+</header>
+
+<!-- 4. CONTENIDO DINÁMICO (Aquí se inyecta index.html, login.html, etc.) -->
+<main>
+    {% block content %}
+    {% endblock %}
+</main>
+
+</body>
+</html>
