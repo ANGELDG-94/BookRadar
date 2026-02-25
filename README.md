@@ -1,14 +1,14 @@
-📡 BookRadar
+<img src="static/img/logo.png" height="40" align="absmiddle"> BookRadar
 
-Proyecto de Fin de Grado Ciclo Formativo: Desarrollo de Aplicaciones Multiplataforma (CESUR) Autor: Ángel Durán Gómez
+Proyecto de Fin de Grado Ciclo Formativo: Desarrollo de Aplicaciones Multiplataforma (CESUR) año 2026. Autor: Ángel Durán Gómez
 
 📖 Sobre el proyecto
 
 En la actualidad, la inmensa cantidad de contenido literario disponible dificulta a los lectores encontrar su próxima lectura. BookRadar es una aplicación web destinada a centralizar y personalizar el proceso de descubrimiento de libros.
 
-Su objetivo principal es resolver el problema de la sobrecarga de información (information overload), ofreciendo a los usuarios sugerencias de lectura altamente relevantes basadas en su perfil y su historial de consumo.
+El objetivo principal es resolver el problema de la sobrecarga de información, ofreciendo a los usuarios sugerencias de lectura altamente relevantes basadas en su perfil y su historial de consumo.
 
-🚀 Características Principales (En desarrollo)
+📋 Características Principales (En desarrollo)
 
 Búsqueda Híbrida Inteligente: Motor de búsqueda que prioriza una base de datos local (MySQL) para reducir latencia, respaldado por la Google Books API para consultas externas.
 
@@ -48,29 +48,10 @@ Integración Externa: Google Books API
 
 Actualmente, el proyecto ha completado la Entrega 2 (Diseño Técnico e Implementación Base).
 
-$$x$$
+En cuanto a Backend, se esta trabajando en el registro de usuarios, la gestión de la biblioteca personal y el motor de recomendaciones.
 
-Diseño de Arquitectura (Modelo Entidad-Relación y Casos de Uso).
-
-$$x$$
-
-Diseño de Interfaz de Usuario (Wireframes y UI).
-
-$$x$$
-
-Núcleo del Backend funcional (Conexión BD + Consumo de API).
-
-$$x$$
-
-Prototipo Frontend renderizado.
-
-$$$$
-
-Módulo de Autenticación de Usuarios (Próximamente).
-
-$$$$
-
-Motor de Recomendación Algorítmica (Próximamente).
+En el Frontend, se ha realizado un primer boceto de la interfaz de usuario, con un enfoque en la simplicidad y la usabilidad. Al que se le han adherido una paleta de colores neutra y tipografía legible para mejorar la experiencia del usuario.
+Y se esta trabajando en las distintas ventanas de la aplicación, como el panel de control del usuario, la página de búsqueda y la sección de recomendaciones.
 
 📄 Licencia
 
