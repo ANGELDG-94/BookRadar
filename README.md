@@ -49,7 +49,7 @@ Integración Externa: Google Books API
 
 1.  **Clonación del repositorio:**
     ```bash
-    git clone [https://github.com/ANGELDG-94/BookRadar.git](https://github.com/ANGELDG-94/BookRadar.git)
+    git clone (https://github.com/ANGELDG-94/BookRadar.git)
     cd BookRadar
     ```
 
@@ -66,20 +66,20 @@ Integración Externa: Google Books API
     ```
 
 4.  **Configuración de la Base de Datos:**
-    * [cite_start]Importe el archivo `database_bookradar.sql` en su servidor MySQL local[cite: 587].
-    * [cite_start]Ajuste las credenciales de conexión en el archivo `db.py`[cite: 503].
+    * Importe el archivo `database_bookradar.sql` en su servidor MySQL local.
+    * Ajuste las credenciales de conexión en el archivo `db.py`.
 
 5.  **Ejecución de la aplicación:**
     ```bash
     python app.py
     ```
-    [cite_start]Acceda a `http://127.0.0.1:5000` en su navegador[cite: 590].
+    Acceda a `http://127.0.0.1:5000` en su navegador.
 
 ---
 - Estado del Proyecto
-  * [cite_start]**Entrega 1:** Análisis y requisitos (Finalizado)
-  * [cite_start]**Entrega 2:** Diseño técnico y arquitectura (Finalizado)
-  * [cite_start]**Entrega 3:** Implementación estable de registro, búsqueda híbrida, gestión de biblioteca y perfil de usuario (Finalizado)
+  * **Entrega 1:** Análisis y requisitos (Finalizado)
+  * **Entrega 2:** Diseño técnico y arquitectura (Finalizado)
+  * **Entrega 3:** Implementación estable de registro, búsqueda híbrida, gestión de biblioteca y perfil de usuario (Finalizado)
 
 ---
 
