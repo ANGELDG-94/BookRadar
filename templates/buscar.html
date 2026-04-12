@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="hero-section" style="text-align: center; padding: 3rem 1rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+    <h1 class="hero-title" style="margin-bottom: 1.5rem;">Rastreador Avanzado 🛰️</h1>
+
+    <form action="/buscar" method="GET" style="max-width: 800px; margin: 0 auto;">
+        <!-- Barra de búsqueda principal (Sin 'required') -->
+        <div style="display: flex; gap: 10px; margin-bottom: 1rem;">
+            <input type="text" name="q" value="{{ query }}" class="search-input"
+                   style="flex: 1; padding: 15px 20px; border-radius: 12px;"
+                   placeholder="Buscar título, autor o deja vacío para filtrar por género...">
+            <button type="submit" class="search-btn" style="padding: 0 30px;">Rastrear</button>
+        </div>
+
+        <!-- Filtros secundarios -->
+        <div style="display: flex; gap: 15px; justify-content: center; align-items: center; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <label style="font-size: 0.8rem; font-weight: 700; color: #64748B;">GÉNERO:</label>
+                <select name="genero" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #E2E8F0; background: white; color: #1E293B; font-size: 0.9rem;">
+                    <option value="">Cualquier género</option>
+                    {% for g in generos %}
+                    <option value="{{ g }}" {% if genero_sel == g %}selected{% endif %}>{{ g }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <label style="font-size: 0.8rem; font-weight: 700; color: #64748B;">ORDEN:</label>
+                <select name="orden" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #E2E8F0; background: white; color: #1E293B; font-size: 0.9rem;">
+                    <option value="relevance" {% if orden_sel == 'relevance' %}selected{% endif %}>Relevancia</option>
+                    <option value="newest" {% if orden_sel == 'newest' %}selected{% endif %}>Más recientes</option>
+                </select>
+            </div>
+
+            {% if query or genero_sel %}
+            <a href="/buscar" style="font-size: 0.8rem; color: #EF4444; text-decoration: none; font-weight: 600;">Limpiar filtros</a>
+            {% endif %}
+        </div>
+    </form>
+</section>
+
+<div class="content-wrapper" style="margin-top: 2rem;">
+    {% if query or genero_sel %}
+    <p style="color: #64748B; margin-bottom: 2rem;">
+        Mostrando resultados
+        {% if query %} para <strong>"{{ query }}"</strong>{% endif %}
+        {% if genero_sel %} en la categoría <strong>{{ genero_sel }}</strong>{% endif %}
+    </p>
+
+    <div class="books-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 2rem;">
+        {% for libro in libros %}
+        <article class="book-card" style="background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: transform 0.3s; display: flex; flex-direction: column;">
+            <a href="/libro/{{ libro.google_id }}" style="text-decoration: none; color: inherit; flex-grow: 1;">
+                <div style="height: 300px; overflow: hidden; background: #f1f5f9;">
+                    <img src="{{ libro.portada if libro.portada else 'https://via.placeholder.com/300x450?text=Sin+Portada' }}"
+                         style="width: 100%; height: 100%; object-fit: cover;"
+                         onerror="this.src='https://via.placeholder.com/300x450?text=Imagen+No+Disponible'">
+                </div>
+                <div style="padding: 1.2rem;">
+                    <h3 style="font-size: 1rem; margin-bottom: 0.4rem; color: #1E293B; font-weight: 700; height: 2.4em; overflow: hidden;">{{ libro.titulo }}</h3>
+                    <p style="color: #64748B; font-size: 0.85rem; margin-bottom: 1rem;">{{ libro.autor }}</p>
+                </div>
+            </a>
+            <div style="padding: 0 1.2rem 1.2rem; display: grid; gap: 8px;">
+                <button onclick="registrarSimple(this, {{ libro | tojson | forceescape }}, 'LEIDO')" style="background: #10B981; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 700;">✔️ Ya lo leí</button>
+                <button onclick="registrarSimple(this, {{ libro | tojson | forceescape }}, 'DESEADO')" style="background: #3B82F6; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 700;">⭐ Lo quiero</button>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 5rem 0; color: #94A3B8;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">🔎</div>
+        <p>Escribe algo o selecciona un género para empezar a rastrear la red.</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    async function registrarSimple(btn, libro, estado) {
+        const originalText = btn.innerHTML;
+        btn.innerHTML = "Guardando...";
+        btn.disabled = true;
+
+        try {
+            const response = await fetch('/api/guardar-libro', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...libro, estado: estado })
+            });
+
+            const data = await response.json();
+            if (data.status === 'success') {
+                btn.innerHTML = "¡Añadido!";
+                btn.style.background = "#059669";
+            } else {
+                alert(data.mensaje);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        } catch (e) {
+            alert("Error de conexión");
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="max-width: 650px; margin: 4rem auto; padding: 2.5rem; background: white; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center;">
+    <h2 style="color: #1e293b; font-size: 2rem;">¡Casi listo! 🎯</h2>
+    <p style="color: #64748b; margin-bottom: 2rem;">Para darte mejores recomendaciones, <strong>elige al menos 3 categorías</strong> que te gusten:</p>
+
+    {% if error %}
+        <div style="background: #fef2f2; color: #ef4444; padding: 10px; border-radius: 8px; margin-bottom: 1.5rem; font-weight: bold;">
+            {{ error }}
+        </div>
+    {% endif %}
+
+    <div style="margin-bottom: 1rem; font-weight: 600; color: #3b82f6;">
+        Seleccionados: <span id="contador">0</span> / 3
+    </div>
+
+    <form action="/registro-paso2" method="POST" id="form-generos">
+        <div style="display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-bottom: 2.5rem;">
+            {% for g in generos %}
+            <label style="cursor: pointer;">
+                <input type="checkbox" name="generos" value="{{ g.id_genero }}" class="genero-checkbox" style="display: none;">
+                <span class="genero-pill">{{ g.nombre_genero }}</span>
+            </label>
+            {% endfor %}
+        </div>
+
+        <button type="submit" id="btn-finalizar" disabled
+                style="width: 100%; background: #94a3b8; color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; cursor: not-allowed; font-size: 1.1rem; transition: all 0.3s;">
+            Selecciona 3 para continuar
+        </button>
+    </form>
+</div>
+
+<style>
+    .genero-pill {
+        display: inline-block;
+        padding: 12px 24px;
+        border: 2px solid #e2e8f0;
+        border-radius: 50px;
+        color: #475569;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+    input:checked + .genero-pill {
+        background: #3b82f6;
+        color: white;
+        border-color: #3b82f6;
+        transform: scale(1.05);
+    }
+    .btn-activo {
+        background: #3b82f6 !important;
+        cursor: pointer !important;
+    }
+</style>
+
+<script>
+    const checkboxes = document.querySelectorAll('.genero-checkbox');
+    const btn = document.getElementById('btn-finalizar');
+    const contador = document.getElementById('contador');
+
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', () => {
+            const seleccionados = document.querySelectorAll('.genero-checkbox:checked').length;
+            contador.innerText = seleccionados;
+
+            if (seleccionados >= 3) {
+                btn.disabled = false;
+                btn.classList.add('btn-activo');
+                btn.innerText = "Finalizar configuración →";
+            } else {
+                btn.disabled = true;
+                btn.classList.remove('btn-activo');
+                btn.innerText = `Selecciona ${3 - seleccionados} más`;
+            }
+        });
+    });
+</script>
+{% endblock %}

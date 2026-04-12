@@ -18,37 +18,64 @@ body {
 
 /* --- NAVBAR --- */
 .app-header {
-    background-color: var(--nav-bg);
-    color: var(--white);
-    padding: 1rem 1.5rem;
+    background-color: #1e293b; /* Color oscuro corporativo */
+    color: white;
+    padding: 0.5rem 2rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
 }
 
 .logo {
     font-weight: 800;
-    font-size: 1.25rem;
-    letter-spacing: -0.025em;
+    font-size: 1.4rem;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 12px;
+    color: white;
+    /* FORZAMOS QUE NO HAYA SUBRAYADO */
+    text-decoration: none !important;
+    transition: opacity 0.2s;
 }
 
-.icon { color: var(--accent); }
+/* Aseguramos que el span dentro del link tampoco se subraye */
+.logo span {
+    text-decoration: none !important;
+}
+
+.logo:hover {
+    opacity: 0.85;
+}
+
+/* CLASE ESPECÍFICA PARA LA IMAGEN DEL LOGO */
+.logo-img {
+    height: 45px;
+    width: auto;
+    display: block;
+    border-radius: 8px;
+}
+
+.main-nav {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
 
 .nav-link {
-    color: var(--white);
+    color: #cbd5e1;
     text-decoration: none;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     font-weight: 500;
-    padding: 0.5rem 1rem;
-    border-radius: 0.375rem;
-    transition: background 0.2s;
+    transition: color 0.2s;
 }
 
-.nav-link:hover { background-color: rgba(255,255,255,0.1); }
+.nav-link:hover {
+    color: white;
+}
 
 /* --- HERO (BUSCADOR) --- */
 .hero-section {
@@ -155,4 +182,29 @@ body {
     font-size: 0.8rem;
     color: var(--text-muted);
     margin-top: 0.25rem;
+}
+
+.generos-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 20px 0;
+}
+.genero-tag input { display: none; }
+.genero-tag span {
+    padding: 10px 20px;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+.genero-tag input:checked + span {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+.genero-tag span:hover {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
 }

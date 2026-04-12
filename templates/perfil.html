@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="content-wrapper" style="max-width: 1000px; margin: 2rem auto; padding: 0 1rem;">
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem;">
+        <h1 class="hero-title" style="text-align: left; margin: 0;">Mi Perfil de Lector ⚙️</h1>
+        <div style="text-align: right; background: #F1F5F9; padding: 10px 20px; border-radius: 12px; border: 1px solid #E2E8F0;">
+            <span style="display: block; font-size: 0.7rem; color: #64748B; font-weight: 800; text-transform: uppercase;">Libros Terminados</span>
+            <strong style="font-size: 1.5rem; color: #1E293B;">{{ stats.total_leidos if stats else 0 }}</strong>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 2rem; margin-bottom: 3rem; align-items: start;">
+        <div style="background: white; padding: 2rem; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: center;">
+            <h3 style="margin-bottom: 1.5rem; font-size: 1rem; color: #1E293B; font-weight: 700;">Distribución de Lecturas</h3>
+            {% if stats and stats.data_grafico %}
+            <div style="max-width: 280px; margin: 0 auto;">
+                <canvas id="canvasGeneros"></canvas>
+            </div>
+            {% else %}
+            <div style="padding: 3rem 1rem; color: #94A3B8; border: 2px dashed #F1F5F9; border-radius: 15px;">
+                <p style="font-size: 0.9rem;">Registra libros como "Leídos" para ver tu ADN lector.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <div style="background: linear-gradient(135deg, #3B82F6, #2563EB); color: white; padding: 1.5rem; border-radius: 20px;">
+                <span style="font-size: 0.8rem; opacity: 0.9; font-weight: 600;">GÉNERO PREDOMINANTE</span>
+                <h2 style="font-size: 1.8rem; margin: 5px 0; text-transform: capitalize;">{{ stats.top_genero if stats else 'Explorador/a' }}</h2>
+            </div>
+
+            <div style="background: white; padding: 1.5rem; border-radius: 20px; border: 1px solid #E2E8F0;">
+                <h4 style="margin-bottom: 1rem; font-size: 0.9rem; color: #1E293B;">Ranking de Categorías</h4>
+                <ul style="list-style: none; padding: 0; margin: 0;">
+                    {% if stats and stats.labels_grafico %}
+                    {% for i in range(stats.labels_grafico|length) %}
+                    <li style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #F1F5F9;">
+                        <span style="font-size: 0.9rem; color: #475569;">{{ stats.labels_grafico[i] }}</span>
+                        <span style="font-weight: 700; color: #1E293B;">{{ stats.data_grafico[i] }} libros</span>
+                    </li>
+                    {% endfor %}
+                    {% else %}
+                    <li style="color: #94A3B8; font-size: 0.85rem;">No hay datos suficientes aún.</li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div style="grid-column: span 2; background: #f9f9f9; padding: 20px; border-radius: 12px;">
+        <h3 style="margin-bottom: 15px;">Datos Personales</h3>
+
+        <div id="form-datos">
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #64748B; margin-bottom: 8px;">Nombre de Usuario</label>
+                <input type="text" id="edit_nombre" value="{{ usuario.nombre_usuario }}" style="width: 100%; margin-bottom: 10px;">
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #64748B; margin-bottom: 8px;">Correo Electrónico</label>
+                <input type="email" id="edit_email" value="{{ usuario.email }}" style="width: 100%; margin-bottom: 10px;">
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #64748B; margin-bottom: 8px;">Nueva Contraseña</label>
+                <input type="password" id="edit_pass" placeholder="Nueva contraseña" style="width: 100%; margin-bottom: 10px;">
+            </div>
+
+            <button type="button" onclick="actualizarPerfil()" style="width: 100%; padding: 15px; background: #3B82F6; color: white; border: none; border-radius: 10px; font-weight: 700; cursor: pointer;">
+                Actualizar Datos Personales
+            </button>
+        </div>
+    </div>
+
+    <section style="background: white; padding: 2.5rem; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); margin-bottom: 2.5rem;">
+        <h2 style="font-size: 1.2rem; margin-bottom: 1rem; color: #1E293B; font-weight: 800;">Mis Géneros Favoritos</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px;">
+            {% for genero in generos %}
+            <label class="genre-tag" style="display: flex; align-items: center; gap: 12px; padding: 15px; border: 1px solid #E2E8F0; border-radius: 15px; cursor: pointer;">
+                <input type="checkbox" name="genero" value="{{ genero.id_genero }}" {% if favoritos and genero.id_genero in favoritos %}checked{% endif %}>
+                <span>{{ genero.nombre_genero }}</span>
+            </label>
+            {% endfor %}
+        </div>
+        <button onclick="guardarPreferencias()" style="margin-top: 2rem; background: #1E293B; color: white; width: 100%; padding: 15px; border: none; border-radius: 10px; cursor: pointer;">Actualizar Intereses</button>
+    </section>
+
+    <div style="text-align: center; padding: 2rem; border-top: 1px solid #eee;">
+        <form action="/perfil/eliminar" method="POST" onsubmit="return confirm('¿Borrar cuenta definitivamente?')">
+            <button type="submit" style="color: #FB7185; border: 1px solid #FB7185; background: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                Eliminar mi cuenta definitivamente
+            </button>
+        </form>
+    </div>
+</div>
+
+<style>
+    .genre-tag:has(input:checked) { background: #EFF6FF; border-color: #3B82F6; }
+    .genre-tag:has(input:checked) span { color: #1D4ED8; }
+</style>
+
+<script>
+    // --- LÓGICA DEL GRÁFICO ---
+    {% if stats and stats.data_grafico %}
+    const ctx = document.getElementById('canvasGeneros').getContext('2d');
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: {{ stats.labels_grafico | tojson }},
+            datasets: [{
+                data: {{ stats.data_grafico | tojson }},
+                backgroundColor: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            cutout: '75%',
+            responsive: true,
+            plugins: { legend: { position: 'bottom' } }
+        }
+    });
+    {% endif %}
+
+    // --- GESTIÓN DE PERFIL ---
+    document.getElementById('form-perfil').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = {
+            usuario: document.getElementById('nombre').value,
+            password: document.getElementById('pass').value
+        };
+        try {
+            const res = await fetch('/api/perfil/actualizar', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) { alert("Perfil actualizado correctamente."); window.location.reload(); }
+        } catch (err) { alert("Error al actualizar el perfil."); }
+    });
+
+    // GESTIÓN DE DATOS DE USUARIO
+async function actualizarPerfil() {
+    try {
+        const nombre = document.getElementById('edit_nombre').value;
+        const email = document.getElementById('edit_email').value;
+        const pass = document.getElementById('edit_pass').value;
+
+        console.log("Enviando:", { nombre, email, pass });
+
+        const res = await fetch('/api/perfil/actualizar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                usuario: nombre,
+                email: email,
+                password: pass
+            })
+        });
+
+        const data = await res.json();
+        if (data.status === 'success') {
+            alert("¡Perfil actualizado!");
+            window.location.reload();
+        } else {
+            alert("Error del servidor: " + data.mensaje);
+        }
+    } catch (e) {
+        console.error("ERROR JS:", e);
+        alert("Fallo en el código: " + e.message);
+    }
+}
+
+// GUARDAR PREFERENCIAS (GÉNEROS)
+async function guardarGeneros() {
+    const checkboxes = document.querySelectorAll('input[name="generos"]:checked');
+    const generosIds = Array.from(checkboxes).map(cb => cb.value);
+
+    try {
+        const res = await fetch('/api/preferencias', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ generos: generosIds })
+        });
+
+        const data = await res.json();
+        if (data.status === 'success') {
+            alert("¡Géneros actualizados!");
+            window.location.reload();
+        }
+    } catch (e) {
+        alert("Fallo al guardar preferencias.");
+    }
+}
+</script>
+{% endblock %}

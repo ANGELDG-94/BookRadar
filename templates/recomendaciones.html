@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="hero-section" style="text-align: center; margin-bottom: 2rem; padding: 3rem 1rem; background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-radius: 0 0 2rem 2rem;">
+    <h1 class="hero-title" style="font-size: 2.5rem; margin-bottom: 1rem;">Para ti, {{ session.nombre_usuario }} 🌟</h1>
+    <p style="color: #64748B; max-width: 600px; margin: 0 auto;">Nuestro radar ha analizado tus gustos y estos libros podrían ser tu próxima gran aventura.</p>
+</section>
+
+<div class="content-wrapper">
+    {% if aviso == "personaliza" %}
+    <div style="text-align: center; padding: 4rem 2rem; background: white; border-radius: 1.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);">
+        <div style="font-size: 4rem; margin-bottom: 1rem;">🎨</div>
+        <h2>Ayúdanos a conocerte</h2>
+        <p style="color: #64748B; margin-bottom: 2rem;">Aún no has seleccionado tus géneros favoritos en tu perfil. Dinos qué te gusta para poder recomendarte libros increíbles.</p>
+        <a href="/perfil" class="search-btn" style="text-decoration: none; display: inline-block;">Configurar mi Perfil</a>
+    </div>
+    {% elif recomendaciones %}
+    <div class="books-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 2.5rem;">
+        {% for libro in recomendaciones %}
+        <article class="book-card" style="background: white; border-radius: 1rem; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); display: flex; flex-direction: column; transition: transform 0.3s ease; position: relative;">
+
+            <!-- Etiqueta de Origen/Género -->
+            <div style="position: absolute; top: 10px; left: 10px; background: rgba(30, 41, 59, 0.8); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; backdrop-filter: blur(4px); z-index: 5;">
+                {{ libro.genero_origen }}
+            </div>
+
+            <!-- Enlace a Detalles desde la Imagen -->
+            <a href="/libro/{{ libro.google_id }}" style="display: block; height: 350px; background: #f1f5f9; overflow: hidden;">
+                <img src="{{ libro.portada }}" alt="{{ libro.titulo }}"
+                     style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s;"
+                     onmouseover="this.style.transform='scale(1.05)'"
+                     onmouseout="this.style.transform='scale(1)'"
+                     onerror="this.src='https://via.placeholder.com/300x450?text=Sin+Portada'">
+            </a>
+
+            <div style="padding: 1.5rem; flex-grow: 1; display: flex; flex-direction: column;">
+                <!-- Enlace a Detalles desde el Título -->
+                <a href="/libro/{{ libro.google_id }}" style="text-decoration: none; color: inherit;">
+                    <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem; line-height: 1.3; height: 2.6em; overflow: hidden;">{{ libro.titulo }}</h3>
+                </a>
+                <p style="color: #64748B; font-size: 0.9rem; margin-bottom: 1.5rem;">{{ libro.autor }}</p>
+
+                <div style="margin-top: auto; display: grid; gap: 8px;">
+                    <button onclick="guardarRecomendado(this, {{ libro | tojson | forceescape }}, 'DESEADO')"
+                            style="background: #3b82f6; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: background 0.2s;">
+                        ⭐ Lo quiero leer
+                    </button>
+                </div>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p style="text-align: center; color: #64748B;">No hemos encontrado sugerencias en este momento. ¡Vuelve pronto!</p>
+    {% endif %}
+</div>
+
+<script>
+    async function guardarRecomendado(btn, libro, estado) {
+        const originalText = btn.innerText;
+        btn.innerText = "Guardando...";
+        btn.disabled = true;
+
+        try {
+            const response = await fetch('/api/guardar-libro', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...libro, estado: estado })
+            });
+            const res = await response.json();
+            if(res.status === 'success') {
+                btn.innerText = "¡En tu lista!";
+                btn.style.background = "#10b981";
+            } else {
+                btn.innerText = originalText;
+                btn.disabled = false;
+                alert(res.mensaje);
+            }
+        } catch (e) {
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }
+    }
+</script>
+{% endblock %}

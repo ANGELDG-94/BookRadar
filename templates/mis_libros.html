@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="hero-section" style="text-align: center; margin-bottom: 2rem;">
+    <h1 class="hero-title">Mi Radar de Lectura 📚</h1>
+    <p style="color: #64748B;">Gestiona tus libros por categorías</p>
+</section>
+
+<!-- Sistema de Pestañas (Tabs) -->
+<nav style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 2rem; border-bottom: 1px solid #E2E8F0; padding-bottom: 1rem;">
+    <a href="/mis-libros" class="tab-btn" style="text-decoration: none; padding: 10px 20px; font-weight: 600; color: #1E293B; {% if not filtro %}border-bottom: 3px solid #1E293B;{% endif %}">Todos</a>
+    <a href="/mis-libros?estado=LEIDO" class="tab-btn" style="text-decoration: none; padding: 10px 20px; font-weight: 600; color: #10B981; {% if filtro == 'LEIDO' %}border-bottom: 3px solid #10B981;{% endif %}">✔️ Leídos</a>
+    <a href="/mis-libros?estado=DESEADO" class="tab-btn" style="text-decoration: none; padding: 10px 20px; font-weight: 600; color: #3B82F6; {% if filtro == 'DESEADO' %}border-bottom: 3px solid #3B82F6;{% endif %}">⭐ Deseados</a>
+    <a href="/mis-libros?estado=NO_INTERESA" class="tab-btn" style="text-decoration: none; padding: 10px 20px; font-weight: 600; color: #94A3B8; {% if filtro == 'NO_INTERESA' %}border-bottom: 3px solid #94A3B8;{% endif %}">🚫 Descartados</a>
+</nav>
+
+<div class="content-wrapper">
+    {% if libros %}
+    <div class="books-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 2rem;">
+        {% for libro in libros %}
+        <article class="book-card" style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); position: relative; display: flex; flex-direction: column;">
+
+            <!-- Etiqueta de Estado -->
+            <div style="position: absolute; top: 10px; right: 10px; padding: 4px 12px; border-radius: 15px; font-size: 0.7rem; font-weight: bold; color: white; z-index: 10;
+                    background: {% if libro.estado == 'LEIDO' %}#10B981{% elif libro.estado == 'DESEADO' %}#3B82F6{% else %}#94A3B8{% endif %}; shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                {{ libro.estado }}
+            </div>
+
+            <!-- Enlace a Detalles (Solo si tiene google_id) -->
+            {% if libro.google_id %}
+            <a href="/libro/{{ libro.google_id }}" style="display: block; height: 280px; overflow: hidden; background: #F1F5F9;">
+                <img src="{{ libro.portada_url }}" alt="Portada"
+                     style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s;"
+                     onmouseover="this.style.transform='scale(1.05)'"
+                     onmouseout="this.style.transform='scale(1)'"
+                     onerror="this.src='https://via.placeholder.com/300x450?text=Sin+Portada'">
+            </a>
+            {% else %}
+            <div style="display: block; height: 280px; overflow: hidden; background: #F1F5F9;">
+                <img src="{{ libro.portada_url }}" alt="Portada" style="width: 100%; height: 100%; object-fit: cover; filter: grayscale(1);" onerror="this.src='https://via.placeholder.com/300x450?text=Sin+ID'">
+            </div>
+            {% endif %}
+
+            <div style="padding: 1.25rem; flex-grow: 1; display: flex; flex-direction: column;">
+                <!-- Enlace a Detalles desde el Título (Solo si tiene google_id) -->
+                {% if libro.google_id %}
+                <a href="/libro/{{ libro.google_id }}" style="text-decoration: none; color: inherit;">
+                    <h3 style="font-size: 0.95rem; color: #1E293B; margin-bottom: 0.3rem;">{{ libro.titulo }}</h3>
+                </a>
+                {% else %}
+                <h3 style="font-size: 0.95rem; color: #94A3B8; margin-bottom: 0.3rem;">{{ libro.titulo }} (Sin detalles)</h3>
+                {% endif %}
+
+                <p style="color: #64748B; font-size: 0.8rem; margin-bottom: 1rem;">{{ libro.autor }}</p>
+
+                <button onclick="eliminarLibro({{ libro.id_libros }}, '{{ libro.titulo }}')"
+                        style="margin-top: auto; width: 100%; background: none; border: 1px solid #fee2e2; color: #ef4444; padding: 6px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 600;">
+                    Eliminar
+                </button>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 5rem 0; color: #94A3B8;">
+        <p>No hay libros en esta sección.</p>
+        <a href="/buscar" style="color: #3B82F6; text-decoration: none; font-weight: 600;">Ir al buscador</a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    async function eliminarLibro(id, titulo) {
+        if(!confirm(`¿Deseas quitar "${titulo}" de tu biblioteca?`)) return;
+        const res = await fetch(`/api/eliminar-libro/${id}`, { method: 'DELETE' });
+        if(res.ok) window.location.reload();
+    }
+</script>
+{% endblock %}

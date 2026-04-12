@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="content-wrapper" style="max-width: 1000px; margin: 2rem auto; padding: 0 1rem;">
+    <div style="display: flex; flex-wrap: wrap; gap: 3rem; background: white; padding: 2.5rem; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05);">
+
+        <!-- COLUMNA IZQUIERDA: PORTADA Y ACCIONES -->
+        <div style="flex: 1; min-width: 300px;">
+            <div style="border-radius: 15px; overflow: hidden; box-shadow: 0 15px 30px rgba(0,0,0,0.15); background: #F1F5F9; position: relative; min-height: 450px;">
+
+                {% set url_img = libro.portada or libro.portada_url %}
+                {% if url_img and url_img.startswith('http://') %}
+                {% set url_img = url_img.replace('http://', 'https://') %}
+                {% endif %}
+
+                <img src="{{ url_img if url_img else 'https://via.placeholder.com/400x600?text=Sin+Imagen' }}"
+                     alt="Portada de {{ libro.titulo }}"
+                     style="width: 100%; height: auto; display: block; object-fit: cover;"
+                     onerror="this.onerror=null; this.src='https://via.placeholder.com/400x600?text=Portada+no+disponible';">
+            </div>
+
+            {% if session.get('id_usuario') %}
+            <!-- GESTIÓN DE ESTADOS -->
+            <div style="margin-top: 2rem; background: #F8FAF6; padding: 1.5rem; border-radius: 12px; border: 1px solid #E2E8F0; margin-bottom: 1rem;">
+                <h4 style="margin-bottom: 1rem; font-size: 0.8rem; color: #64748B; letter-spacing: 0.05em; text-transform: uppercase;">Mi Radar</h4>
+                <div style="display: grid; gap: 10px;">
+                    <button id="btn-leido" onclick="actualizarEstadoLibro('LEIDO')" class="btn-det"
+                            style="background: {{ '#10B981' if estado == 'LEIDO' else '#FFF' }};
+                               color: {{ '#FFF' if estado == 'LEIDO' else '#10B981' }};
+                               border: 1px solid #10B981;">✔️ Ya lo he leído</button>
+
+                    <button id="btn-deseado" onclick="actualizarEstadoLibro('DESEADO')" class="btn-det"
+                            style="background: {{ '#3B82F6' if estado == 'DESEADO' else '#FFF' }};
+                               color: {{ '#FFF' if estado == 'DESEADO' else '#3B82F6' }};
+                               border: 1px solid #3B82F6;">⭐ Lo quiero leer</button>
+
+                    <button id="btn-descarta" onclick="actualizarEstadoLibro('NO_INTERESA')" class="btn-det"
+                            style="background: {{ '#94A3B8' if estado == 'NO_INTERESA' else '#FFF' }};
+                               color: {{ '#FFF' if estado == 'NO_INTERESA' else '#94A3B8' }};
+                               border: 1px solid #94A3B8;">🚫 No me interesa</button>
+                </div>
+            </div>
+
+            <!-- SECCIÓN DE CALIFICACIÓN Y RESEÑA (Solo visible si es LEIDO) -->
+            <div id="seccion-lectura" style="display: {{ 'block' if estado == 'LEIDO' else 'none' }}; background: #FFF; padding: 1.5rem; border-radius: 12px; border: 1px solid #E2E8F0; animation: fadeIn 0.5s ease;">
+                <h4 style="margin-bottom: 0.5rem; font-size: 0.8rem; color: #64748B; letter-spacing: 0.05em; text-transform: uppercase;">Tu valoración</h4>
+                <div class="stars-container" style="display: flex; gap: 8px; font-size: 1.8rem; cursor: pointer; color: #E2E8F0; margin-bottom: 1.5rem;">
+                    <span onmouseover="previewStars(1)" onmouseout="renderRating()" onclick="saveRating(1)" class="star" id="s1">★</span>
+                    <span onmouseover="previewStars(2)" onmouseout="renderRating()" onclick="saveRating(2)" class="star" id="s2">★</span>
+                    <span onmouseover="previewStars(3)" onmouseout="renderRating()" onclick="saveRating(3)" class="star" id="s3">★</span>
+                    <span onmouseover="previewStars(4)" onmouseout="renderRating()" onclick="saveRating(4)" class="star" id="s4">★</span>
+                    <span onmouseover="previewStars(5)" onmouseout="renderRating()" onclick="saveRating(5)" class="star" id="s5">★</span>
+                </div>
+
+                <h4 style="margin-bottom: 0.5rem; font-size: 0.8rem; color: #64748B; letter-spacing: 0.05em; text-transform: uppercase;">Mi reseña personal</h4>
+                <textarea id="resena-texto" placeholder="¿Qué te ha parecido?" style="width: 100%; min-height: 80px; padding: 10px; border: 1px solid #E2E8F0; border-radius: 8px; font-family: inherit; font-size: 0.9rem; resize: none; margin-bottom: 10px;">{{ comentario or '' }}</textarea>
+                <button onclick="guardarResena()" class="btn-det" style="background: #1E293B; color: white; border: none; font-size: 0.85rem; padding: 10px;">Guardar opinión</button>
+                <p id="rating-status" style="font-size: 0.75rem; color: #94A3B8; margin-top: 8px; text-align: center;">Puntúa tu lectura</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- COLUMNA DERECHA: INFORMACIÓN -->
+        <div style="flex: 2; min-width: 350px;">
+            <nav style="margin-bottom: 1.5rem;">
+                <a href="javascript:history.back()" style="color: #3B82F6; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 5px;">
+                    <span>←</span> Volver al radar
+                </a>
+            </nav>
+
+            <h1 style="font-size: 2.2rem; color: #1E293B; margin-bottom: 0.5rem; font-weight: 800; line-height: 1.2;">{{ libro.titulo }}</h1>
+            <p style="font-size: 1.2rem; color: #3B82F6; font-weight: 600; margin-bottom: 2rem;">{{ libro.autor }}</p>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem; background: #F1F5F9; padding: 1rem; border-radius: 10px; font-size: 0.85rem;">
+                <div><strong style="color: #64748B;">Páginas:</strong> {{ libro.paginas }}</div>
+                <div><strong style="color: #64748B;">Fecha:</strong> {{ libro.fecha }}</div>
+                <div><strong style="color: #64748B;">Editorial:</strong> {{ libro.editorial }}</div>
+                <div><strong style="color: #64748B;">ISBN:</strong> {{ libro.isbn }}</div>
+            </div>
+
+            <h3 style="font-size: 1.1rem; margin-bottom: 1rem; color: #1E293B; border-bottom: 2px solid #F1F5F9; padding-bottom: 5px; display: inline-block;">Sinopsis</h3>
+            <div style="line-height: 1.8; color: #475569; text-align: justify; font-size: 1rem;">
+                {{ libro.descripcion | safe }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    .btn-det { padding: 12px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: all 0.2s; width: 100%; font-size: 0.9rem; text-align: center; }
+    .btn-det:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .star.active { color: #F59E0B; }
+    .star:hover { transform: scale(1.2); transition: transform 0.1s; }
+</style>
+
+<script>
+    let userRating = {{ calificacion or 0 }};
+
+    function renderRating(val = userRating) {
+        for(let i=1; i<=5; i++) {
+            const star = document.getElementById('s' + i);
+            if(star) {
+                if(i <= val) star.classList.add('active');
+                else star.classList.remove('active');
+            }
+        }
+    }
+
+    function previewStars(val) {
+        renderRating(val);
+    }
+
+    // 1. Guardar Puntuación
+    async function saveRating(val) {
+        userRating = val;
+        renderRating();
+        try {
+            const res = await fetch('/api/guardar-libro', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    google_id: "{{ libro.google_id }}",
+                    calificacion: val,
+                    estado: 'LEIDO'
+                })
+            });
+            if(res.ok) {
+                document.getElementById('rating-status').innerText = "¡Puntuación guardada!";
+                document.getElementById('rating-status').style.color = "#10B981";
+            }
+        } catch(e) { console.error(e); }
+    }
+
+    // 2. Guardar Reseña
+    async function guardarResena() {
+        const texto = document.getElementById('resena-texto').value;
+        try {
+            const res = await fetch('/api/guardar-libro', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    google_id: "{{ libro.google_id }}",
+                    resena: texto,
+                    estado: 'LEIDO'
+                })
+            });
+            if(res.ok) {
+                document.getElementById('rating-status').innerText = "¡Reseña guardada!";
+                document.getElementById('rating-status').style.color = "#10B981";
+            }
+        } catch(e) { console.error(e); }
+    }
+
+    // 3. Cambiar Estado
+    async function actualizarEstadoLibro(nuevoEstado) {
+
+        const libroData = {
+            google_id: "{{ libro.google_id }}",
+            titulo: {{ libro.titulo | tojson }},
+            autor: {{ libro.autor | tojson }},
+            portada: "{{ url_img }}",
+            sinopsis: {{ libro.descripcion | striptags | truncate(300) | tojson }},
+            categorias: {{ libro.categorias | tojson }},
+            estado: nuevoEstado
+        };
+
+        try {
+            const res = await fetch('/api/guardar-libro', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(libroData)
+            });
+
+            if (res.ok) {
+                if (nuevoEstado === 'LEIDO') {
+                    document.getElementById('seccion-lectura').style.display = 'block';
+                    document.getElementById('btn-leido').style.background = '#10B981';
+                    document.getElementById('btn-leido').style.color = '#FFF';
+                } else {
+                    window.location.reload();
+                }
+            }
+        } catch (e) {
+            console.error("Error al guardar:", e);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        renderRating();
+    });
+</script>
+{% endblock %}

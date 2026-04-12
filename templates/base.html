@@ -3,36 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BookRadar 📡</title>
-
-    <!-- 1. Enlace al CSS (Usa url_for para que Flask encuentre el archivo) -->
+    <title>BookRadar </title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-
-    <!-- 2. Tipografía 'Inter' de Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
-<body>
+<body style="margin: 0; font-family: 'Inter', sans-serif; background-color: #F8FAFC;">
 
-<!-- 3. BARRA DE NAVEGACIÓN (Se repite en todas las páginas) -->
-<header class="app-header">
-    <div class="logo">
-        <!-- Carga el logo desde static/img/logo.png -->
-        <!-- AÑADIDO: style="height: 40px..." para evitar que salga gigante -->
-        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo" class="logo-img" style="height: 40px; width: auto;">
-        <span>BookRadar</span>
+<!-- BARRA DE NAVEGACIÓN SUPERIOR -->
+<header style="background: #1E293B; color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <a href="/" class="logo">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo BookRadar" class="logo-img">
+            <span>BookRadar</span>
+        </a>
     </div>
-    <nav class="main-nav">
-        <a href="#" class="nav-link">Acceder</a>
+
+    <nav style="display: flex; gap: 20px; align-items: center;">
+        <a href="/buscar" style="color: #CBD5E1; text-decoration: none; font-size: 0.9rem; font-weight: 500;">Buscar</a>
+
+        {% if session.get('id_usuario') %}
+        <a href="/mis-libros" style="color: #CBD5E1; text-decoration: none; font-size: 0.9rem; font-weight: 500;"> Mis Libros</a>
+        <a href="/recomendaciones" style="color: #CBD5E1; text-decoration: none; font-size: 0.9rem; font-weight: 500;">Recomendaciones</a>
+        <span style="color: #64748B; margin: 0 10px;">|</span>
+
+        <a href="/perfil" style="font-size: 0.9rem; color: white; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
+            <span>Hola, </span>
+            <strong style="border-bottom: 1px dashed #3B82F6;">{{ session.get('nombre_usuario') }}</strong>
+            <span style="font-size: 0.7rem;">⚙️</span>
+        </a>
+
+        <a href="/logout" style="color: #FB7185; text-decoration: none; font-size: 0.9rem; border: 1px solid #FB7185; padding: 4px 12px; border-radius: 6px; margin-left: 10px;">Salir</a>
+        {% else %}
+        <a href="/login" style="background: #3B82F6; color: white; text-decoration: none; padding: 8px 16px; border-radius: 6px; font-size: 0.9rem; font-weight: 600;">Acceder</a>
+        {% endif %}
     </nav>
 </header>
 
-<!-- 4. CONTENIDO DINÁMICO (Aquí se inyecta index.html, login.html, etc.) -->
-<main>
+<!-- CONTENIDO DINÁMICO -->
+<main style="max-width: 1200px; margin: 0 auto; padding: 2rem;">
     {% block content %}
     {% endblock %}
 </main>
+
+<footer style="text-align: center; padding: 2rem; color: #94A3B8; font-size: 0.8rem;">
+    &copy; 2026 BookRadar - Proyecto TFG
+</footer>
 
 </body>
 </html>
