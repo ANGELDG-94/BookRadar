@@ -1,55 +1,50 @@
-<img src="static/img/logo.png" height="40" align="absmiddle"> BookRadar
+<div align="center">
+  <img src="static/img/logo.png" height="80" alt="BookRadar Logo">
+  <h1>BookRadar</h1>
+  <p><b>Proyecto de Fin de Grado</b> | Desarrollo de Aplicaciones Multiplataforma (CESUR) 2026</p>
+  <p>Autor: Ángel Durán Gómez</p>
+</div>
 
-Proyecto de Fin de Grado Ciclo Formativo: Desarrollo de Aplicaciones Multiplataforma (CESUR) año 2026. Autor: Ángel Durán Gómez
+---
 
-- Sobre el proyecto
+##  Sobre el proyecto
+En la actualidad, la inmensa cantidad de contenido literario disponible dificulta a los lectores encontrar su próxima lectura. **BookRadar** es una aplicación web destinada a centralizar y personalizar el proceso de descubrimiento de libros.
 
-En la actualidad, la inmensa cantidad de contenido literario disponible dificulta a los lectores encontrar su próxima lectura. BookRadar es una aplicación web destinada a centralizar y personalizar el proceso de descubrimiento de libros.
+El objetivo principal es resolver el problema de la sobrecarga de información, ofreciendo a los usuarios sugerencias de lectura altamente relevantes basadas en su perfil, su historial de consumo y el análisis inteligente de sus reseñas.
 
-El objetivo principal es resolver el problema de la sobrecarga de información, ofreciendo a los usuarios sugerencias de lectura altamente relevantes basadas en su perfil y su historial de consumo.
+##  Características Principales
 
-- Características Principales (En desarrollo)
+* **Búsqueda Híbrida Inteligente:** Motor de búsqueda que prioriza una base de datos local (MySQL) para reducir latencia, respaldado por la Google Books API para consultas externas.
+* **Gestor de Biblioteca Personal:** Clasificación de libros en estados ('Quiero leer', 'Leído' o 'Descartado') y sistema de calificaciones.
+* **Inteligencia Artificial (NLP):** Análisis de sentimiento en las reseñas usando TextBlob para detectar el "ADN lector" (polaridad positiva/negativa) y afinar el motor de sugerencias.
+* **Motor de Recomendaciones Concurrente:** Sugerencias personalizadas renderizadas en tiempo real gracias a la optimización de hilos paralelos (`ThreadPoolExecutor`).
+* **Diseño Responsive y "Clean UI":** Interfaz moderna adaptada a dispositivos móviles y navegación asíncrona sin recargas (Fetch API) orientada a evitar la fatiga visual.
 
-Búsqueda Híbrida Inteligente: Motor de búsqueda que prioriza una base de datos local (MySQL) para reducir latencia, respaldado por la Google Books API para consultas externas.
+## 🛠️ Stack Tecnológico
 
-Gestor de Biblioteca Personal: Clasificación de libros en estados: 'Quiero leer', 'Leído' o 'Descartado'.
+**Backend (Lógica & Servidor)**
+* **Lenguaje:** Python 3.12
+* **Framework:** Flask (Renderizado dinámico con Jinja2)
+* **IA & Concurrencia:** TextBlob (NLP) y `concurrent.futures`
+* **Testing:** Pytest
 
-Motor de Recomendaciones: Sugerencias personalizadas basadas en géneros favoritos y calificaciones previas.
+**Frontend (Interfaz de Usuario)**
+* HTML5 & CSS3 (Media queries para diseño móvil)
+* JavaScript (Vanilla) con Fetch API
+* Librería Gráfica: Chart.js
 
-Diseño "Clean UI": Interfaz minimalista orientada a evitar la fatiga visual.
+**Persistencia de Datos y Seguridad**
+* **Base de Datos:** MySQL 8.0 (mysql-connector-python)
+* **Integración Externa:** Google Books API (Librería `requests`)
+* **Seguridad:** Werkzeug (Hashing de contraseñas) y validación de sesiones.
 
-- Stack Tecnológico
+## ⚙️ Instalación y Configuración
 
-El proyecto sigue una arquitectura MVC adaptada a la web:
-
-Backend (Lógica & API)
-
-Python 3.12
-
-Framework: Flask
-
-Conectividad: mysql-connector-python & requests
-
-Frontend (Interfaz de Usuario)
-
-HTML5 (Plantillas Jinja2)
-
-CSS3 (Diseño responsivo y variables nativas)
-
-JavaScript (Vanilla)
-
-Persistencia de Datos
-
-Base de Datos: MySQL 8.0
-
-Integración Externa: Google Books API
-
-- Instalación y Configuración
-[cite_start]Siga estos pasos para ejecutar una instancia local del proyecto :
+Siga estos pasos para ejecutar una instancia local del proyecto:
 
 1.  **Clonación del repositorio:**
     ```bash
-    git clone (https://github.com/ANGELDG-94/BookRadar.git)
+    git clone [https://github.com/ANGELDG-94/BookRadar.git](https://github.com/ANGELDG-94/BookRadar.git)
     cd BookRadar
     ```
 
@@ -65,23 +60,25 @@ Integración Externa: Google Books API
     pip install -r requirements.txt
     ```
 
-4.  **Configuración de la Base de Datos:**
+4.  **Descarga de diccionarios NLP (Obligatorio para IA):**
+    ```bash
+    python -m textblob.download_corpora
+    ```
+
+5.  **Configuración de la Base de Datos:**
     * Importe el archivo `database_bookradar.sql` en su servidor MySQL local.
     * Ajuste las credenciales de conexión en el archivo `db.py`.
 
-5.  **Ejecución de la aplicación:**
+6.  **Ejecución de la aplicación:**
     ```bash
     python app.py
     ```
     Acceda a `http://127.0.0.1:5000` en su navegador.
 
 ---
-- Estado del Proyecto
-  * **Entrega 1:** Análisis y requisitos (Finalizado)
-  * **Entrega 2:** Diseño técnico y arquitectura (Finalizado)
-  * **Entrega 3:** Implementación estable de registro, búsqueda híbrida, gestión de biblioteca y perfil de usuario (Finalizado)
+##  Estado del Proyecto
+* **Proyecto Finalizado (Entrega Final):** Análisis, diseño técnico, arquitectura híbrida, interfaz responsiva, pruebas automatizadas e integración de Inteligencia Artificial completados con éxito.
 
 ---
-
 ## 📄 Licencia
 Este proyecto se distribuye bajo la **Licencia MIT**.
