@@ -42,8 +42,8 @@
         const data = await res.json();
 
         if(data.status === 'success') {
-            alert("¡Cuenta creada con éxito! Ahora puedes iniciar sesión.");
-            window.location.href = '/login';
+            // ¡AQUÍ ESTÁ LA MAGIA! Ahora te lleva directamente al paso 2
+            window.location.href = '/registro-paso2';
         } else {
             alert("Error: " + data.mensaje);
         }

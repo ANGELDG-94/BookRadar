@@ -53,7 +53,7 @@ body {
 
 /* CLASE ESPECÍFICA PARA LA IMAGEN DEL LOGO */
 .logo-img {
-    height: 45px;
+    height: 80px;
     width: auto;
     display: block;
     border-radius: 8px;

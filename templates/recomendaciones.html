@@ -1,49 +1,75 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="hero-section" style="text-align: center; margin-bottom: 2rem; padding: 3rem 1rem; background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-radius: 0 0 2rem 2rem;">
-    <h1 class="hero-title" style="font-size: 2.5rem; margin-bottom: 1rem;">Para ti, {{ session.nombre_usuario }} 🌟</h1>
-    <p style="color: #64748B; max-width: 600px; margin: 0 auto;">Nuestro radar ha analizado tus gustos y estos libros podrían ser tu próxima gran aventura.</p>
+<section class="hero-recomendaciones" style="position: relative; padding: 6rem 1rem; overflow: hidden; border-radius: 0 0 3.5rem 3.5rem; margin-bottom: 3rem; background: #080d17;">
+
+    <div style="position: absolute; top: 50%; left: 50%; width: 100%; height: 100%;
+                background: url('{{ url_for('static', filename='img/logo.png') }}') center/contain no-repeat;
+                transform: translate(-50%, -50%);
+                filter: blur(10px) brightness(0.6);
+                z-index: 1;">
+    </div>
+
+    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+                background: radial-gradient(circle, rgba(15, 23, 42, 0.1) 0%, rgba(8, 13, 23, 0.8) 80%);
+                z-index: 2;">
+    </div>
+
+    <div style="position: relative; z-index: 3; text-align: center; color: white;">
+        <div style="display: inline-block; padding: 6px 16px; background: rgba(59, 130, 246, 0.15); border-radius: 30px; border: 1px solid rgba(59, 130, 246, 0.4); backdrop-filter: blur(5px); margin-bottom: 1.5rem;">
+            <span style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; color: #60a5fa;">Algoritmo Predictivo BookRadar</span>
+        </div>
+
+        <h1 style="font-size: 3.2rem; font-weight: 900; margin-bottom: 0.5rem; letter-spacing: -2px; text-shadow: 0 4px 30px rgba(0,0,0,0.7);">
+            Para ti, <span style="color: #3b82f6;">{{ session.nombre_usuario }}</span>
+        </h1>
+
+        <p style="color: #f1f5f9; max-width: 600px; margin: 0 auto; font-size: 1.15rem; font-weight: 400; line-height: 1.5; text-shadow: 0 2px 10px rgba(0,0,0,0.5);">
+            El radar ha analizado tu "ADN lector" para detectar estas obras. Descubre tu próxima lectura.
+        </p>
+    </div>
 </section>
 
-<div class="content-wrapper">
-    {% if aviso == "personaliza" %}
-    <div style="text-align: center; padding: 4rem 2rem; background: white; border-radius: 1.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);">
-        <div style="font-size: 4rem; margin-bottom: 1rem;">🎨</div>
-        <h2>Ayúdanos a conocerte</h2>
-        <p style="color: #64748B; margin-bottom: 2rem;">Aún no has seleccionado tus géneros favoritos en tu perfil. Dinos qué te gusta para poder recomendarte libros increíbles.</p>
-        <a href="/perfil" class="search-btn" style="text-decoration: none; display: inline-block;">Configurar mi Perfil</a>
-    </div>
-    {% elif recomendaciones %}
-    <div class="books-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 2.5rem;">
+<div class="content-wrapper" style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+    {% if recomendaciones %}
+    <div class="books-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 2.5rem;">
         {% for libro in recomendaciones %}
-        <article class="book-card" style="background: white; border-radius: 1rem; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); display: flex; flex-direction: column; transition: transform 0.3s ease; position: relative;">
+        <article class="book-card" style="background: white; border-radius: 1.2rem; overflow: hidden; box-shadow: 0 15px 35px rgba(0,0,0,0.1); display: flex; flex-direction: column; transition: transform 0.3s ease; border: 1px solid #f1f5f9;" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
 
-            <!-- Etiqueta de Origen/Género -->
-            <div style="position: absolute; top: 10px; left: 10px; background: rgba(30, 41, 59, 0.8); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; backdrop-filter: blur(4px); z-index: 5;">
-                {{ libro.genero_origen }}
-            </div>
+            <a href="/libro/{{ libro.google_id }}" style="text-decoration: none; color: inherit; display: block;">
 
-            <!-- Enlace a Detalles desde la Imagen -->
-            <a href="/libro/{{ libro.google_id }}" style="display: block; height: 350px; background: #f1f5f9; overflow: hidden;">
-                <img src="{{ libro.portada }}" alt="{{ libro.titulo }}"
-                     style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s;"
-                     onmouseover="this.style.transform='scale(1.05)'"
-                     onmouseout="this.style.transform='scale(1)'"
-                     onerror="this.src='https://via.placeholder.com/300x450?text=Sin+Portada'">
+                <div style="height: 320px; overflow: hidden; position: relative; background: #f8fafc;">
+                    {% if libro.portada %}
+                    <img src="{{ libro.portada|replace('http://', 'https://')|safe }}"
+                         alt="{{ libro.titulo }}"
+                         style="width: 100%; height: 100%; object-fit: cover; display: block;"
+                         referrerpolicy="no-referrer"
+                         onerror="this.src='https://ui-avatars.com/api/?name={{ libro.titulo|urlencode }}&background=f1f5f9&color=3b82f6&size=600&font-size=0.25&bold=true'">
+                    {% else %}
+                    <img src="https://ui-avatars.com/api/?name={{ libro.titulo|urlencode }}&background=f1f5f9&color=3b82f6&size=600&font-size=0.25&bold=true"
+                         alt="Sin imagen - {{ libro.titulo }}"
+                         style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                    {% endif %}
+
+                    <div style="position: absolute; top: 12px; right: 12px; background: rgba(15, 23, 42, 0.8); color: white; padding: 4px 10px; border-radius: 8px; font-size: 0.65rem; font-weight: 800; backdrop-filter: blur(4px);">
+                        {{ libro.genero_origen }}
+                    </div>
+
+                    <div style="position: absolute; inset: 0; box-shadow: inset 0 -40px 60px rgba(0,0,0,0.05); pointer-events: none;"></div>
+                </div>
+
+                <div style="padding: 1.2rem 1.2rem 0.5rem; flex-grow: 1;">
+                    <h3 style="font-size: 1.1rem; font-weight: 800; color: #0f172a; margin-bottom: 0.4rem; line-height: 1.3; height: 2.6em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">{{ libro.titulo }}</h3>
+                    <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 0.5rem;">{{ libro.autor }}</p>
+                </div>
             </a>
 
-            <div style="padding: 1.5rem; flex-grow: 1; display: flex; flex-direction: column;">
-                <!-- Enlace a Detalles desde el Título -->
-                <a href="/libro/{{ libro.google_id }}" style="text-decoration: none; color: inherit;">
-                    <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem; line-height: 1.3; height: 2.6em; overflow: hidden;">{{ libro.titulo }}</h3>
-                </a>
-                <p style="color: #64748B; font-size: 0.9rem; margin-bottom: 1.5rem;">{{ libro.autor }}</p>
-
-                <div style="margin-top: auto; display: grid; gap: 8px;">
-                    <button onclick="guardarRecomendado(this, {{ libro | tojson | forceescape }}, 'DESEADO')"
-                            style="background: #3b82f6; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: background 0.2s;">
-                        ⭐ Lo quiero leer
+            <div style="padding: 0 1.2rem 1.2rem;">
+                <div style="margin-top: auto;">
+                    <button class="btn-save"
+                            onclick="guardarRecomendado(this, {{ libro | tojson | forceescape }}, 'DESEADO')"
+                            style="width: 100%; background: #3b82f6; color: white; border: none; padding: 12px; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.3s; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);">
+                        <span>⭐</span> Lo quiero leer
                     </button>
                 </div>
             </div>
@@ -51,14 +77,16 @@
         {% endfor %}
     </div>
     {% else %}
-    <p style="text-align: center; color: #64748B;">No hemos encontrado sugerencias en este momento. ¡Vuelve pronto!</p>
+    <div style="text-align: center; padding: 5rem 0; color: #94a3b8;">
+        <p style="font-size: 1.1rem;">No hemos encontrado sugerencias en este momento. ¡Sigue catalogando libros para afinar el radar!</p>
+    </div>
     {% endif %}
 </div>
 
 <script>
     async function guardarRecomendado(btn, libro, estado) {
-        const originalText = btn.innerText;
-        btn.innerText = "Guardando...";
+        const originalText = btn.innerHTML;
+        btn.innerHTML = "<span>💾</span> Guardando...";
         btn.disabled = true;
 
         try {
@@ -69,15 +97,16 @@
             });
             const res = await response.json();
             if(res.status === 'success') {
-                btn.innerText = "¡En tu lista!";
+                btn.innerHTML = "<span>✔️</span> ¡En tu lista!";
                 btn.style.background = "#10b981";
+                btn.style.boxShadow = "0 4px 12px rgba(16, 185, 129, 0.2)";
             } else {
-                btn.innerText = originalText;
+                btn.innerHTML = originalText;
                 btn.disabled = false;
                 alert(res.mensaje);
             }
         } catch (e) {
-            btn.innerText = originalText;
+            btn.innerHTML = originalText;
             btn.disabled = false;
         }
     }

@@ -3,92 +3,113 @@
 {% block content %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<div class="content-wrapper" style="max-width: 1000px; margin: 2rem auto; padding: 0 1rem;">
+<section style="position: relative; padding: 4rem 1rem; overflow: hidden; border-radius: 0 0 3.5rem 3.5rem; background: #0f172a; margin-bottom: 2.5rem; display: flex; align-items: center; justify-content: center; min-height: 520px; border-bottom: 3px solid #3b82f6;">
 
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem;">
-        <h1 class="hero-title" style="text-align: left; margin: 0;">Mi Perfil de Lector ⚙️</h1>
-        <div style="text-align: right; background: #F1F5F9; padding: 10px 20px; border-radius: 12px; border: 1px solid #E2E8F0;">
-            <span style="display: block; font-size: 0.7rem; color: #64748B; font-weight: 800; text-transform: uppercase;">Libros Terminados</span>
-            <strong style="font-size: 1.5rem; color: #1E293B;">{{ stats.total_leidos if stats else 0 }}</strong>
-        </div>
+    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+                background: url('https://images.unsplash.com/photo-1521587760476-6c12a4b040da?q=80&w=2000&auto=format&fit=crop') center/cover no-repeat;
+                filter: brightness(0.4) saturate(0.8); z-index: 1;">
     </div>
 
-    <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 2rem; margin-bottom: 3rem; align-items: start;">
-        <div style="background: white; padding: 2rem; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: center;">
-            <h3 style="margin-bottom: 1.5rem; font-size: 1rem; color: #1E293B; font-weight: 700;">Distribución de Lecturas</h3>
-            {% if stats and stats.data_grafico %}
-            <div style="max-width: 280px; margin: 0 auto;">
-                <canvas id="canvasGeneros"></canvas>
+    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+                background: linear-gradient(180deg, rgba(15, 23, 42, 0.3) 0%, rgba(15, 23, 42, 0.8) 100%);
+                z-index: 2;">
+    </div>
+
+    <div class="content-wrapper" style="position: relative; z-index: 3; max-width: 1050px; width: 100%; margin: 0 auto;">
+
+        <div class="perfil-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem; color: white;">
+            <h1 class="hero-title" style="text-align: left; margin: 0; font-size: 2.8rem; font-weight: 900; letter-spacing: -1.5px; text-shadow: 0 4px 20px rgba(0,0,0,0.6); color: #ffffff;">Mi Perfil de Lector</h1>
+
+            <div style="text-align: right; background: rgba(255,255,255,0.08); padding: 10px 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(5px);">
+                <span style="display: block; font-size: 0.7rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;">Libros Terminados</span>
+                <strong style="font-size: 1.8rem; color: white; line-height: 1.2;">{{ stats.total_leidos if stats else 0 }}</strong>
             </div>
-            {% else %}
-            <div style="padding: 3rem 1rem; color: #94A3B8; border: 2px dashed #F1F5F9; border-radius: 15px;">
-                <p style="font-size: 0.9rem;">Registra libros como "Leídos" para ver tu ADN lector.</p>
-            </div>
-            {% endif %}
         </div>
 
-        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-            <div style="background: linear-gradient(135deg, #3B82F6, #2563EB); color: white; padding: 1.5rem; border-radius: 20px;">
-                <span style="font-size: 0.8rem; opacity: 0.9; font-weight: 600;">GÉNERO PREDOMINANTE</span>
-                <h2 style="font-size: 1.8rem; margin: 5px 0; text-transform: capitalize;">{{ stats.top_genero if stats else 'Explorador/a' }}</h2>
+        <div class="perfil-grid" style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 2.5rem; align-items: stretch;">
+
+            <div class="seccion-tarjeta" style="background: rgba(255, 255, 255, 0.95); padding: 2.5rem; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); text-align: center; border: 1px solid rgba(255,255,255,0.2);">
+                <h3 style="margin-bottom: 2rem; font-size: 0.9rem; color: #1e293b; font-weight: 700; text-transform: uppercase;">Distribución de Lecturas</h3>
+                {% if stats and stats.data_grafico %}
+                <div style="max-width: 250px; margin: 0 auto;">
+                    <canvas id="canvasGeneros"></canvas>
+                </div>
+                {% else %}
+                <div style="padding: 3rem 1rem; color: #94a3b8; border: 2px dashed #e2e8f0; border-radius: 15px;">
+                    <p style="font-size: 0.9rem;">Registra libros como "Leídos" para ver tu ADN lector.</p>
+                </div>
+                {% endif %}
             </div>
 
-            <div style="background: white; padding: 1.5rem; border-radius: 20px; border: 1px solid #E2E8F0;">
-                <h4 style="margin-bottom: 1rem; font-size: 0.9rem; color: #1E293B;">Ranking de Categorías</h4>
-                <ul style="list-style: none; padding: 0; margin: 0;">
-                    {% if stats and stats.labels_grafico %}
-                    {% for i in range(stats.labels_grafico|length) %}
-                    <li style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #F1F5F9;">
-                        <span style="font-size: 0.9rem; color: #475569;">{{ stats.labels_grafico[i] }}</span>
-                        <span style="font-weight: 700; color: #1E293B;">{{ stats.data_grafico[i] }} libros</span>
-                    </li>
-                    {% endfor %}
-                    {% else %}
-                    <li style="color: #94A3B8; font-size: 0.85rem;">No hay datos suficientes aún.</li>
-                    {% endif %}
-                </ul>
+            <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                <div style="background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; padding: 2rem; border-radius: 20px; box-shadow: 0 15px 30px rgba(37, 99, 235, 0.3);">
+                    <span style="font-size: 0.8rem; opacity: 0.9; font-weight: 600; text-transform: uppercase;">Género Predominante</span>
+                    <h2 style="font-size: 2.2rem; margin: 10px 0; font-weight: 900; text-transform: capitalize;">{{ stats.top_genero if stats else 'Explorador' }}</h2>
+                </div>
+
+                <div class="seccion-tarjeta" style="background: white; padding: 1.8rem; border-radius: 20px; border: 1px solid #e2e8f0; flex-grow: 1; box-shadow: 0 10px 20px rgba(0,0,0,0.2);">
+                    <h4 style="margin-bottom: 1rem; font-size: 0.8rem; color: #64748b; font-weight: 800; text-transform: uppercase;">Top Categorías</h4>
+                    <ul style="list-style: none; padding: 0; margin: 0;">
+                        {% if stats and stats.labels_grafico %}
+                        {% for i in range(stats.labels_grafico|length) %}
+                        <li style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f5f9;">
+                            <span style="color: #475569; font-size: 0.95rem; font-weight: 500;">{{ stats.labels_grafico[i] }}</span>
+                            <span style="font-weight: 700; color: #1e293b;">{{ stats.data_grafico[i] }} libros</span>
+                        </li>
+                        {% endfor %}
+                        {% endif %}
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
-    <div style="grid-column: span 2; background: #f9f9f9; padding: 20px; border-radius: 12px;">
-        <h3 style="margin-bottom: 15px;">Datos Personales</h3>
+</section>
+
+<div class="content-wrapper" style="max-width: 900px; margin: 0 auto; padding: 0 1.5rem 4rem;">
+
+    <section class="seccion-tarjeta" style="background: white; padding: 2.5rem; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); margin-bottom: 2.5rem; border: 1px solid #E2E8F0;">
+        <h2 style="font-size: 1.2rem; margin-bottom: 1.5rem; color: #1E293B; font-weight: 800;">Mis Géneros Favoritos</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px;">
+            {% for genero in generos %}
+            <label class="genre-tag" style="display: flex; align-items: center; gap: 12px; padding: 15px; border: 1px solid #E2E8F0; border-radius: 15px; cursor: pointer; transition: 0.3s;">
+                <input type="checkbox" name="generos" value="{{ genero.id_genero }}" {% if favoritos and genero.id_genero in favoritos %}checked{% endif %}>
+                <span>{{ genero.nombre_genero }}</span>
+            </label>
+            {% endfor %}
+        </div>
+        <button onclick="guardarGeneros()" style="margin-top: 2rem; background: #3B82F6; color: white; width: 100%; padding: 15px; border: none; border-radius: 10px; font-weight: 700; cursor: pointer;">
+            Actualizar Intereses
+        </button>
+        <div id="msj-preferencias" style="margin-top: 10px; font-size: 0.85rem; font-weight: 600; text-align: center; display: none; padding: 10px; border-radius: 8px;"></div>
+    </section>
+
+    <section class="seccion-tarjeta" style="background: white; padding: 2.5rem; border-radius: 20px; border: 1px solid #E2E8F0; box-shadow: 0 10px 25px rgba(0,0,0,0.05); margin-bottom: 2.5rem;">
+        <h3 style="font-size: 1.2rem; margin-bottom: 1.5rem; color: #1E293B; font-weight: 800;">Datos Personales</h3>
 
         <div id="form-datos">
             <div style="margin-bottom: 15px;">
                 <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #64748B; margin-bottom: 8px;">Nombre de Usuario</label>
-                <input type="text" id="edit_nombre" value="{{ usuario.nombre_usuario }}" style="width: 100%; margin-bottom: 10px;">
+                <input type="text" id="edit_nombre" value="{{ usuario.nombre_usuario }}" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
             </div>
 
             <div style="margin-bottom: 15px;">
                 <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #64748B; margin-bottom: 8px;">Correo Electrónico</label>
-                <input type="email" id="edit_email" value="{{ usuario.email }}" style="width: 100%; margin-bottom: 10px;">
+                <input type="email" id="edit_email" value="{{ usuario.email }}" readonly style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; background: #f8fafc; color: #94a3b8; cursor: not-allowed;">
             </div>
 
             <div style="margin-bottom: 15px;">
                 <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #64748B; margin-bottom: 8px;">Nueva Contraseña</label>
-                <input type="password" id="edit_pass" placeholder="Nueva contraseña" style="width: 100%; margin-bottom: 10px;">
+                <input type="password" id="edit_pass" placeholder="Nueva contraseña" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
             </div>
 
             <button type="button" onclick="actualizarPerfil()" style="width: 100%; padding: 15px; background: #3B82F6; color: white; border: none; border-radius: 10px; font-weight: 700; cursor: pointer;">
                 Actualizar Datos Personales
             </button>
+            <div id="msj-perfil" style="margin-top: 10px; font-size: 0.85rem; font-weight: 600; text-align: center; display: none; padding: 10px; border-radius: 8px;"></div>
         </div>
-    </div>
-
-    <section style="background: white; padding: 2.5rem; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); margin-bottom: 2.5rem;">
-        <h2 style="font-size: 1.2rem; margin-bottom: 1rem; color: #1E293B; font-weight: 800;">Mis Géneros Favoritos</h2>
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px;">
-            {% for genero in generos %}
-            <label class="genre-tag" style="display: flex; align-items: center; gap: 12px; padding: 15px; border: 1px solid #E2E8F0; border-radius: 15px; cursor: pointer;">
-                <input type="checkbox" name="genero" value="{{ genero.id_genero }}" {% if favoritos and genero.id_genero in favoritos %}checked{% endif %}>
-                <span>{{ genero.nombre_genero }}</span>
-            </label>
-            {% endfor %}
-        </div>
-        <button onclick="guardarPreferencias()" style="margin-top: 2rem; background: #1E293B; color: white; width: 100%; padding: 15px; border: none; border-radius: 10px; cursor: pointer;">Actualizar Intereses</button>
     </section>
 
-    <div style="text-align: center; padding: 2rem; border-top: 1px solid #eee;">
+    <div style="text-align: center; padding: 2rem;">
         <form action="/perfil/eliminar" method="POST" onsubmit="return confirm('¿Borrar cuenta definitivamente?')">
             <button type="submit" style="color: #FB7185; border: 1px solid #FB7185; background: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer;">
                 Eliminar mi cuenta definitivamente
@@ -98,8 +119,31 @@
 </div>
 
 <style>
-    .genre-tag:has(input:checked) { background: #EFF6FF; border-color: #3B82F6; }
+    .genre-tag:has(input:checked) { background: #EFF6FF !important; border-color: #3B82F6; }
     .genre-tag:has(input:checked) span { color: #1D4ED8; }
+    .genre-tag:hover { border-color: #3B82F6; }
+
+    /* FIX PARA MÓVILES */
+    @media (max-width: 768px) {
+        .perfil-grid {
+            grid-template-columns: 1fr !important; /* Pasa de 2 columnas a 1 apilada */
+            gap: 1.5rem !important;
+        }
+        .perfil-header {
+            flex-direction: column !important; /* Apila el título y el contador */
+            align-items: flex-start !important;
+            gap: 15px !important;
+        }
+        .hero-title {
+            font-size: 2rem !important; /* Reduce el tamaño del título principal */
+        }
+        .seccion-tarjeta {
+            padding: 1.5rem !important; /* Reduce el padding excesivo de las cajas blancas */
+        }
+        input, select {
+            box-sizing: border-box !important; /* Evita que el 100% + padding se salga de la pantalla */
+        }
+    }
 </style>
 
 <script>
@@ -113,86 +157,69 @@
             datasets: [{
                 data: {{ stats.data_grafico | tojson }},
                 backgroundColor: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'],
-                borderWidth: 0
+                borderWidth: 2,
+                borderColor: '#ffffff'
             }]
         },
         options: {
             cutout: '75%',
             responsive: true,
-            plugins: { legend: { position: 'bottom' } }
+            plugins: { legend: { position: 'bottom', labels: { padding: 15, font: { weight: 'bold' } } } }
         }
     });
     {% endif %}
 
-    // --- GESTIÓN DE PERFIL ---
-    document.getElementById('form-perfil').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const payload = {
-            usuario: document.getElementById('nombre').value,
-            password: document.getElementById('pass').value
-        };
+    // --- FUNCIONALIDAD JS ---
+    async function actualizarPerfil() {
+        const mensajeDiv = document.getElementById('msj-perfil');
         try {
+            const nombre = document.getElementById('edit_nombre').value;
+            const email = document.getElementById('edit_email').value;
+            const pass = document.getElementById('edit_pass').value;
             const res = await fetch('/api/perfil/actualizar', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(payload)
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ usuario: nombre, email: email, password: pass })
             });
-            if (res.ok) { alert("Perfil actualizado correctamente."); window.location.reload(); }
-        } catch (err) { alert("Error al actualizar el perfil."); }
-    });
-
-    // GESTIÓN DE DATOS DE USUARIO
-async function actualizarPerfil() {
-    try {
-        const nombre = document.getElementById('edit_nombre').value;
-        const email = document.getElementById('edit_email').value;
-        const pass = document.getElementById('edit_pass').value;
-
-        console.log("Enviando:", { nombre, email, pass });
-
-        const res = await fetch('/api/perfil/actualizar', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                usuario: nombre,
-                email: email,
-                password: pass
-            })
-        });
-
-        const data = await res.json();
-        if (data.status === 'success') {
-            alert("¡Perfil actualizado!");
-            window.location.reload();
-        } else {
-            alert("Error del servidor: " + data.mensaje);
+            const data = await res.json();
+            if (data.status === 'success') {
+                mensajeDiv.textContent = "¡Perfil actualizado!";
+                mensajeDiv.style.backgroundColor = "#dcfce7";
+                mensajeDiv.style.color = "#166534";
+                mensajeDiv.style.display = "block";
+            } else { throw new Error(data.mensaje); }
+        } catch (e) {
+            mensajeDiv.textContent = "Error: " + e.message;
+            mensajeDiv.style.backgroundColor = "#fee2e2";
+            mensajeDiv.style.color = "#991b1b";
+            mensajeDiv.style.display = "block";
         }
-    } catch (e) {
-        console.error("ERROR JS:", e);
-        alert("Fallo en el código: " + e.message);
+        setTimeout(() => { mensajeDiv.style.display = "none"; }, 4000);
     }
-}
 
-// GUARDAR PREFERENCIAS (GÉNEROS)
-async function guardarGeneros() {
-    const checkboxes = document.querySelectorAll('input[name="generos"]:checked');
-    const generosIds = Array.from(checkboxes).map(cb => cb.value);
-
-    try {
-        const res = await fetch('/api/preferencias', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ generos: generosIds })
-        });
-
-        const data = await res.json();
-        if (data.status === 'success') {
-            alert("¡Géneros actualizados!");
-            window.location.reload();
+    async function guardarGeneros() {
+        const checkboxes = document.querySelectorAll('input[name="generos"]:checked');
+        const generosIds = Array.from(checkboxes).map(cb => cb.value);
+        const mensajeDiv = document.getElementById('msj-preferencias');
+        try {
+            const res = await fetch('/api/preferencias', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ generos: generosIds })
+            });
+            if (res.ok) {
+                mensajeDiv.textContent = "Preferencias guardadas";
+                mensajeDiv.style.backgroundColor = "#dcfce7";
+                mensajeDiv.style.color = "#166534";
+                mensajeDiv.style.display = "block";
+            } else { throw new Error(); }
+        } catch (e) {
+            mensajeDiv.textContent = "Error al guardar";
+            mensajeDiv.style.backgroundColor = "#fee2e2";
+            mensajeDiv.style.color = "#991b1b";
+            mensajeDiv.style.display = "block";
         }
-    } catch (e) {
-        alert("Fallo al guardar preferencias.");
+        setTimeout(() => { mensajeDiv.style.display = "none"; }, 3000);
     }
-}
 </script>
 {% endblock %}

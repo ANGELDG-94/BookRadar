@@ -4,23 +4,26 @@
 <div class="content-wrapper" style="max-width: 1000px; margin: 2rem auto; padding: 0 1rem;">
     <div style="display: flex; flex-wrap: wrap; gap: 3rem; background: white; padding: 2.5rem; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05);">
 
-        <!-- COLUMNA IZQUIERDA: PORTADA Y ACCIONES -->
         <div style="flex: 1; min-width: 300px;">
-            <div style="border-radius: 15px; overflow: hidden; box-shadow: 0 15px 30px rgba(0,0,0,0.15); background: #F1F5F9; position: relative; min-height: 450px;">
+
+            <div style="border-radius: 15px; overflow: hidden; box-shadow: 0 15px 30px rgba(0,0,0,0.15); background: #F8FAFC; position: relative; height: 450px;">
 
                 {% set url_img = libro.portada or libro.portada_url %}
-                {% if url_img and url_img.startswith('http://') %}
-                {% set url_img = url_img.replace('http://', 'https://') %}
-                {% endif %}
 
-                <img src="{{ url_img if url_img else 'https://via.placeholder.com/400x600?text=Sin+Imagen' }}"
+                {% if url_img %}
+                <img src="{{ url_img|replace('http://', 'https://')|safe }}"
                      alt="Portada de {{ libro.titulo }}"
-                     style="width: 100%; height: auto; display: block; object-fit: cover;"
-                     onerror="this.onerror=null; this.src='https://via.placeholder.com/400x600?text=Portada+no+disponible';">
+                     style="width: 100%; height: 100%; object-fit: cover; display: block;"
+                     referrerpolicy="no-referrer"
+                     onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ libro.titulo|urlencode }}&background=f1f5f9&color=3b82f6&size=600&font-size=0.25&bold=true';">
+                {% else %}
+                <img src="https://ui-avatars.com/api/?name={{ libro.titulo|urlencode }}&background=f1f5f9&color=3b82f6&size=600&font-size=0.25&bold=true"
+                     alt="Sin imagen - {{ libro.titulo }}"
+                     style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                {% endif %}
             </div>
 
             {% if session.get('id_usuario') %}
-            <!-- GESTIÓN DE ESTADOS -->
             <div style="margin-top: 2rem; background: #F8FAF6; padding: 1.5rem; border-radius: 12px; border: 1px solid #E2E8F0; margin-bottom: 1rem;">
                 <h4 style="margin-bottom: 1rem; font-size: 0.8rem; color: #64748B; letter-spacing: 0.05em; text-transform: uppercase;">Mi Radar</h4>
                 <div style="display: grid; gap: 10px;">
@@ -41,7 +44,6 @@
                 </div>
             </div>
 
-            <!-- SECCIÓN DE CALIFICACIÓN Y RESEÑA (Solo visible si es LEIDO) -->
             <div id="seccion-lectura" style="display: {{ 'block' if estado == 'LEIDO' else 'none' }}; background: #FFF; padding: 1.5rem; border-radius: 12px; border: 1px solid #E2E8F0; animation: fadeIn 0.5s ease;">
                 <h4 style="margin-bottom: 0.5rem; font-size: 0.8rem; color: #64748B; letter-spacing: 0.05em; text-transform: uppercase;">Tu valoración</h4>
                 <div class="stars-container" style="display: flex; gap: 8px; font-size: 1.8rem; cursor: pointer; color: #E2E8F0; margin-bottom: 1.5rem;">
@@ -60,7 +62,6 @@
             {% endif %}
         </div>
 
-        <!-- COLUMNA DERECHA: INFORMACIÓN -->
         <div style="flex: 2; min-width: 350px;">
             <nav style="margin-bottom: 1.5rem;">
                 <a href="javascript:history.back()" style="color: #3B82F6; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 5px;">
@@ -159,7 +160,7 @@
             google_id: "{{ libro.google_id }}",
             titulo: {{ libro.titulo | tojson }},
             autor: {{ libro.autor | tojson }},
-            portada: "{{ url_img }}",
+            portada: "{{ url_img|replace('http://', 'https://') if url_img else '' }}",
             sinopsis: {{ libro.descripcion | striptags | truncate(300) | tojson }},
             categorias: {{ libro.categorias | tojson }},
             estado: nuevoEstado

@@ -1,109 +1,125 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="hero-section" style="text-align: center; padding: 3rem 1rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
-    <h1 class="hero-title" style="margin-bottom: 1.5rem;">Rastreador Avanzado 🛰️</h1>
+<style>
+    /* FIX PARA MÓVILES EN LA PANTALLA DE BÚSQUEDA */
+    @media (max-width: 768px) {
+        .hero-title-buscar {
+            font-size: 1.8rem !important; /* Reduce un poco el título */
+        }
+        .formulario-busqueda {
+            padding: 1rem !important;
+            border-radius: 1.2rem !important;
+        }
+        .grupo-busqueda {
+            flex-direction: column !important; /* Apila el buscador y el botón verticalmente */
+            gap: 10px !important;
+        }
+        .grupo-busqueda input, .grupo-busqueda button {
+            width: 100% !important;
+            box-sizing: border-box !important;
+        }
+        .grupo-busqueda button {
+            padding: 12px !important; /* Hace el botón más alto para pulsarlo mejor */
+        }
+        .filtros-busqueda {
+            flex-direction: column !important; /* Apila los filtros de género y orden */
+            align-items: stretch !important;
+            gap: 10px !important;
+        }
+        .filtros-busqueda > div {
+            justify-content: space-between !important;
+        }
+        .books-grid {
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important; /* Hace las portadas un poco más pequeñas para que quepan dos por fila si hay espacio */
+            gap: 1.5rem !important;
+        }
+    }
+</style>
 
-    <form action="/buscar" method="GET" style="max-width: 800px; margin: 0 auto;">
-        <!-- Barra de búsqueda principal (Sin 'required') -->
-        <div style="display: flex; gap: 10px; margin-bottom: 1rem;">
-            <input type="text" name="q" value="{{ query }}" class="search-input"
-                   style="flex: 1; padding: 15px 20px; border-radius: 12px;"
-                   placeholder="Buscar título, autor o deja vacío para filtrar por género...">
-            <button type="submit" class="search-btn" style="padding: 0 30px;">Rastrear</button>
-        </div>
+<section style="position: relative; padding: 3rem 1rem; overflow: hidden; border-radius: 0 0 3rem 3rem; background: #0f172a; margin-bottom: 2rem; display: flex; align-items: center; justify-content: center; min-height: 320px;">
+    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+                background: url('https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?q=80&w=2000&auto=format&fit=crop') center/cover no-repeat;
+                filter: brightness(0.4); z-index: 1;">
+    </div>
 
-        <!-- Filtros secundarios -->
-        <div style="display: flex; gap: 15px; justify-content: center; align-items: center; flex-wrap: wrap;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <label style="font-size: 0.8rem; font-weight: 700; color: #64748B;">GÉNERO:</label>
-                <select name="genero" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #E2E8F0; background: white; color: #1E293B; font-size: 0.9rem;">
-                    <option value="">Cualquier género</option>
-                    {% for g in generos %}
-                    <option value="{{ g }}" {% if genero_sel == g %}selected{% endif %}>{{ g }}</option>
-                    {% endfor %}
-                </select>
+    <div style="position: relative; z-index: 3; max-width: 800px; width: 100%; text-align: center; padding: 0 20px;">
+        <h1 class="hero-title-buscar" style="color: white; font-size: 2.2rem; font-weight: 900; margin-bottom: 1.2rem; letter-spacing: -1px; text-shadow: 0 5px 15px rgba(0,0,0,0.3);">
+            Explora el <span style="color: #3b82f6;">Universo</span> Literario
+        </h1>
+
+        <form class="formulario-busqueda" action="/buscar" method="GET" style="background: rgba(241, 245, 249, 0.85); padding: 1.2rem 1.8rem; border-radius: 1.8rem; backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.3); box-shadow: 0 20px 40px rgba(0,0,0,0.3); margin: 0 auto;">
+            <div class="grupo-busqueda" style="display: flex; gap: 10px; margin-bottom: 1rem;">
+                <input type="text" name="q" value="{{ query }}"
+                       style="flex: 1; padding: 12px 18px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.05); font-size: 0.95rem; outline: none; color: #1e293b; background: rgba(255,255,255,0.9);"
+                       placeholder="Título, autor...">
+                <button type="submit" style="background: #3b82f6; color: white; border: none; padding: 0 20px; border-radius: 10px; font-weight: 800; cursor: pointer; transition: 0.3s;">
+                    RASTREAR
+                </button>
             </div>
 
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <label style="font-size: 0.8rem; font-weight: 700; color: #64748B;">ORDEN:</label>
-                <select name="orden" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #E2E8F0; background: white; color: #1E293B; font-size: 0.9rem;">
-                    <option value="relevance" {% if orden_sel == 'relevance' %}selected{% endif %}>Relevancia</option>
-                    <option value="newest" {% if orden_sel == 'newest' %}selected{% endif %}>Más recientes</option>
-                </select>
-            </div>
+            <div class="filtros-busqueda" style="display: flex; gap: 12px; justify-content: center; align-items: center; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <label style="font-size: 0.65rem; font-weight: 800; color: #475569; text-transform: uppercase;">Género</label>
+                    <select name="genero" style="padding: 6px 10px; border-radius: 8px; border: none; background: rgba(255,255,255,0.7); color: #1e293b; font-size: 0.8rem; font-weight: 600;">
+                        <option value="">Todos</option>
+                        {% for g in generos %}
+                        <option value="{{ g }}" {% if genero_sel == g %}selected{% endif %}>{{ g }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
 
-            {% if query or genero_sel %}
-            <a href="/buscar" style="font-size: 0.8rem; color: #EF4444; text-decoration: none; font-weight: 600;">Limpiar filtros</a>
-            {% endif %}
-        </div>
-    </form>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <label style="font-size: 0.65rem; font-weight: 800; color: #475569; text-transform: uppercase;">Orden</label>
+                    <select name="orden" style="padding: 6px 10px; border-radius: 8px; border: none; background: rgba(255,255,255,0.7); color: #1e293b; font-size: 0.8rem; font-weight: 600;">
+                        <option value="relevance" {% if orden_sel == 'relevance' %}selected{% endif %}>Relevancia</option>
+                        <option value="newest" {% if orden_sel == 'newest' %}selected{% endif %}>Novedades</option>
+                    </select>
+                </div>
+
+                {% if query or genero_sel %}
+                <a href="/buscar" style="font-size: 0.7rem; color: #ef4444; text-decoration: none; font-weight: 700;">✕ Limpiar</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
 </section>
 
-<div class="content-wrapper" style="margin-top: 2rem;">
+<div class="content-wrapper" style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
     {% if query or genero_sel %}
-    <p style="color: #64748B; margin-bottom: 2rem;">
-        Mostrando resultados
-        {% if query %} para <strong>"{{ query }}"</strong>{% endif %}
-        {% if genero_sel %} en la categoría <strong>{{ genero_sel }}</strong>{% endif %}
-    </p>
-
-    <div class="books-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 2rem;">
+    <div class="books-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 2.5rem;">
         {% for libro in libros %}
-        <article class="book-card" style="background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: transform 0.3s; display: flex; flex-direction: column;">
-            <a href="/libro/{{ libro.google_id }}" style="text-decoration: none; color: inherit; flex-grow: 1;">
-                <div style="height: 300px; overflow: hidden; background: #f1f5f9;">
-                    <img src="{{ libro.portada if libro.portada else 'https://via.placeholder.com/300x450?text=Sin+Portada' }}"
-                         style="width: 100%; height: 100%; object-fit: cover;"
-                         onerror="this.src='https://via.placeholder.com/300x450?text=Imagen+No+Disponible'">
+        <article class="book-card" style="background: white; border-radius: 1.2rem; overflow: hidden; box-shadow: 0 15px 35px rgba(0,0,0,0.1); display: flex; flex-direction: column; border: 1px solid #f1f5f9; transition: transform 0.3s ease;" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
+
+            <a href="/libro/{{ libro.google_id }}" style="text-decoration: none; color: inherit; display: flex; flex-direction: column; height: 100%;">
+
+                <div style="height: 320px; overflow: hidden; position: relative; background: #f8fafc;">
+                    {% if libro.portada %}
+                    <img src="{{ libro.portada|replace('http://', 'https://')|safe }}"
+                         alt="{{ libro.titulo }}"
+                         style="width: 100%; height: 100%; object-fit: cover; display: block;"
+                         referrerpolicy="no-referrer"
+                         onerror="this.src='https://ui-avatars.com/api/?name={{ libro.titulo|urlencode }}&background=f1f5f9&color=3b82f6&size=600&font-size=0.25&bold=true'">
+                    {% else %}
+                    <img src="https://ui-avatars.com/api/?name={{ libro.titulo|urlencode }}&background=f1f5f9&color=3b82f6&size=600&font-size=0.25&bold=true"
+                         alt="Sin imagen - {{ libro.titulo }}"
+                         style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                    {% endif %}
+
+                    <div style="position: absolute; inset: 0; box-shadow: inset 0 -40px 60px rgba(0,0,0,0.05); pointer-events: none;"></div>
                 </div>
-                <div style="padding: 1.2rem;">
-                    <h3 style="font-size: 1rem; margin-bottom: 0.4rem; color: #1E293B; font-weight: 700; height: 2.4em; overflow: hidden;">{{ libro.titulo }}</h3>
-                    <p style="color: #64748B; font-size: 0.85rem; margin-bottom: 1rem;">{{ libro.autor }}</p>
+
+                <div style="padding: 1.2rem; flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-start;">
+                    <h3 style="font-size: 1.1rem; font-weight: 800; color: #0f172a; margin-bottom: 0.4rem; line-height: 1.3; height: 2.6em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+                        {{ libro.titulo }}
+                    </h3>
+                    <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 0;">{{ libro.autor }}</p>
                 </div>
             </a>
-            <div style="padding: 0 1.2rem 1.2rem; display: grid; gap: 8px;">
-                <button onclick="registrarSimple(this, {{ libro | tojson | forceescape }}, 'LEIDO')" style="background: #10B981; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 700;">✔️ Ya lo leí</button>
-                <button onclick="registrarSimple(this, {{ libro | tojson | forceescape }}, 'DESEADO')" style="background: #3B82F6; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 700;">⭐ Lo quiero</button>
-            </div>
+
         </article>
         {% endfor %}
     </div>
-    {% else %}
-    <div style="text-align: center; padding: 5rem 0; color: #94A3B8;">
-        <div style="font-size: 3rem; margin-bottom: 1rem;">🔎</div>
-        <p>Escribe algo o selecciona un género para empezar a rastrear la red.</p>
-    </div>
     {% endif %}
 </div>
-
-<script>
-    async function registrarSimple(btn, libro, estado) {
-        const originalText = btn.innerHTML;
-        btn.innerHTML = "Guardando...";
-        btn.disabled = true;
-
-        try {
-            const response = await fetch('/api/guardar-libro', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...libro, estado: estado })
-            });
-
-            const data = await response.json();
-            if (data.status === 'success') {
-                btn.innerHTML = "¡Añadido!";
-                btn.style.background = "#059669";
-            } else {
-                alert(data.mensaje);
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            }
-        } catch (e) {
-            alert("Error de conexión");
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        }
-    }
-</script>
 {% endblock %}

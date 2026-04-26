@@ -4,7 +4,7 @@ import random
 import urllib.parse
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
-
+from textblob import TextBlob
 import mysql.connector
 import requests
 from flask import Flask, jsonify, request, render_template, session, redirect, url_for
@@ -15,10 +15,11 @@ from db import conectar_bd
 # ==========================================
 # CONFIGURACIÓN
 # ==========================================
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'super_secreta_bookradar_2026_clave_unica')
 
+cache_busquedas = {}
 
 # ==========================================
 # FUNCIONES AUXILIARES Y LÓGICA
@@ -31,15 +32,26 @@ def fetch_books_category(query, order="relevance", max_results=10):
         resp = requests.get(url, params=params, timeout=5)
         if resp.status_code == 200:
             items = resp.json().get('items', [])
-            return [{
-                'google_id': item.get('id'),
-                'titulo': item.get('volumeInfo', {}).get('title', 'Sin título'),
-                'autor': ", ".join(item.get('volumeInfo', {}).get('authors', ['Desconocido'])),
-                'portada': item.get('volumeInfo', {}).get('imageLinks', {}).get('thumbnail'),
-                'puntuacion': item.get('volumeInfo', {}).get('averageRating', 0)
-            } for item in items]
+            libros = []
+            for item in items:
+                vol = item.get('volumeInfo', {})
+                image_links = vol.get('imageLinks', None)
+                if image_links and 'thumbnail' in image_links:
+                    portada = image_links['thumbnail'].replace('http://', 'https://').replace('&zoom=5', '&zoom=1')
+                else:
+                    titulo_esc = urllib.parse.quote(vol.get('title', 'Libro'))
+                    portada = f"https://ui-avatars.com/api/?name={titulo_esc}&size=300&background=f1f5f9&color=64748b&format=svg"
+
+                libros.append({
+                    'google_id': item.get('id'),
+                    'titulo': vol.get('title', 'Sin título'),
+                    'autor': ", ".join(vol.get('authors', ['Desconocido'])),
+                    'portada': portada,
+                    'puntuacion': vol.get('averageRating', 0)
+                })
+            return libros
     except Exception as e:
-        logging.error(f"Error cargando categoría {query}: {e}")
+        logging.error(f"Error fetch_books_category: {e}")
     return []
 
 
@@ -70,7 +82,7 @@ def guardar_libro_en_bd(datos_libro, user_id, estado):
                 datos_libro.get('titulo', 'Sin título')[:150],
                 datos_libro.get('autor', 'Desconocido')[:100],
                 cats_str,
-                datos_libro.get('fecha', 'S/F'), # <--- Coincide con la nueva columna
+                datos_libro.get('fecha', 'S/F'),
                 datos_libro.get('portada') or datos_libro.get('portada_url', ''),
                 datos_libro.get('sinopsis') or datos_libro.get('descripcion') or 'Sin descripción'
             ))
@@ -81,22 +93,32 @@ def guardar_libro_en_bd(datos_libro, user_id, estado):
 
         sql_rel = """
                   INSERT INTO usuarios_libros (id_usuario, id_libro, estado, calificacion, comentario)
-                  VALUES (%s, %s, %s, %s, %s) ON DUPLICATE KEY \
-                  UPDATE \
-                      estado = \
-                  VALUES (estado), calificacion = IF(VALUES (calificacion) > 0, VALUES (calificacion), calificacion), comentario = IF(VALUES (comentario) != '', VALUES (comentario), comentario) \
+                  VALUES (%s, %s, %s, %s, %s) ON DUPLICATE KEY 
+                  UPDATE 
+                      estado = VALUES(estado), 
+                      calificacion = IF(VALUES(calificacion) > 0, VALUES(calificacion), calificacion), 
+                      comentario = IF(VALUES(comentario) != '', VALUES(comentario), comentario)
                   """
         cursor.execute(sql_rel, (user_id, id_libro_db, estado, int(calif), resena))
         conn.commit()
-        return {'status': 'success'}
+        return {'status': 'success', 'id_libro_db': id_libro_db}
 
     except Exception as e:
         if conn: conn.rollback()
-        print(f"DEBUG ERROR: {e}")
+        logging.error(f"Error BD al guardar: {e}")
         return {'status': 'error', 'mensaje': str(e)}
     finally:
         if conn: conn.close()
 
+def analizar_sentimiento(comentario):
+    try:
+        analisis = TextBlob(comentario)
+        polaridad = analisis.sentiment.polarity
+        if polaridad > 0.1: return "Positiva"
+        elif polaridad < -0.1: return "Negativa"
+        else: return "Neutral"
+    except:
+        return "Neutral"
 
 # ==========================================
 # 1. RUTAS DE NAVEGACIÓN (Vistas HTML)
@@ -104,36 +126,55 @@ def guardar_libro_en_bd(datos_libro, user_id, estado):
 
 @app.route('/')
 def vista_inicio():
-    # Si el usuario está logueado, verificamos su configuración
     if 'id_usuario' in session:
         uid = session['id_usuario']
         conn = conectar_bd()
-        cursor = conn.cursor()
+        if conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM preferencias_usuario WHERE id_usuario = %s", (uid,))
+            conteo = cursor.fetchone()[0]
+            conn.close()
+            if conteo < 3:
+                return redirect(url_for('vista_registro_paso2'))
 
-        # Contamos cuántos géneros tiene elegidos
-        cursor.execute("SELECT COUNT(*) FROM preferencias_usuario WHERE id_usuario = %s", (uid,))
-        conteo = cursor.fetchone()[0]
-        conn.close()
-
-        # Si tiene menos de 3 (o 0), le obligamos a ir al Paso 2
-        if conteo < 3:
-            return redirect(url_for('vista_registro_paso2'))
-
-    # Si todo está OK o es un invitado, cargamos la página normal
     secciones_config = [
-        {"id": "tendencias", "titulo": "Tendencias Globales", "query": "best sellers 2026", "order": "relevance"},
-        {"id": "misterio", "titulo": "Misterio y Suspense", "query": "subject:Mystery", "order": "relevance"}
+        {"id": "tendencias", "titulo": "Novedades y Tendencias", "query": "subject:fiction", "order": "newest"},
+        {"id": "misterio", "titulo": "Misterio y Suspense", "query": "subject:mystery", "order": "relevance"},
+        {"id": "clasicos", "titulo": "Clásicos Imprescindibles", "query": "subject:classic+literature", "order": "relevance"}
     ]
+
+    if 'id_usuario' in session:
+        conn = conectar_bd()
+        if conn:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("""
+                SELECT g.nombre_genero FROM preferencias_usuario pu 
+                JOIN generos g ON pu.id_genero = g.id_genero 
+                WHERE pu.id_usuario = %s LIMIT 1
+            """, (session['id_usuario'],))
+            res = cursor.fetchone()
+            conn.close()
+
+            if res:
+                genero_fav = res['nombre_genero']
+                secciones_config.insert(0, {
+                    "id": "sugerencias_ia",
+                    "titulo": f"Especialmente para ti: {genero_fav}",
+                    "query": f"subject:{genero_fav}",
+                    "order": "relevance"
+                })
+
     secciones_datos = {}
     with ThreadPoolExecutor() as executor:
-        futuros = {executor.submit(fetch_books_category, s["query"], s["order"]): s["id"] for s in secciones_config}
+        futuros = {executor.submit(fetch_books_category, s["query"], s["order"], 12): s["id"] for s in secciones_config}
         for futuro in as_completed(futuros):
             cat_id = futuros[futuro]
-            secciones_datos[cat_id] = futuro.result()
-
+            try:
+                secciones_datos[cat_id] = futuro.result()
+            except:
+                secciones_datos[cat_id] = []
 
     return render_template('index.html', secciones=secciones_config, datos=secciones_datos)
-
 
 @app.route('/registro', methods=['GET', 'POST'])
 def vista_registro():
@@ -143,25 +184,23 @@ def vista_registro():
         password = generate_password_hash(request.form.get('password'))
 
         conn = conectar_bd()
-        cursor = conn.cursor()
         try:
+            cursor = conn.cursor()
             cursor.execute("INSERT INTO usuarios (nombre_usuario, email, contraseña) VALUES (%s, %s, %s)",
                            (nombre, email, password))
             uid = cursor.lastrowid
             conn.commit()
 
-            # Iniciamos sesión automáticamente para que el sistema sepa quién es en el Paso 2
+            session.clear()
             session['id_usuario'] = uid
             session['nombre_usuario'] = nombre
 
-            # REDIRIGIR AL PASO 2 (Selección de géneros)
             return redirect(url_for('vista_registro_paso2'))
-        except Exception as e:
-            return render_template('registro.html', error="El email ya existe.")
+        except:
+            return render_template('registro.html', error="El email ya está en uso.")
         finally:
-            conn.close()
+            if conn: conn.close()
     return render_template('registro.html')
-
 
 @app.route('/registro-paso2', methods=['GET', 'POST'])
 def vista_registro_paso2():
@@ -169,28 +208,32 @@ def vista_registro_paso2():
         return redirect(url_for('vista_login'))
 
     conn = conectar_bd()
+    if not conn: return "Error de conexión", 500
+
     cursor = conn.cursor(dictionary=True)
 
     if request.method == 'POST':
         generos_seleccionados = request.form.getlist('generos')
         uid = session['id_usuario']
 
-        # VALIDACIÓN: Forzamos mínimo 3 categorías
         if len(generos_seleccionados) < 3:
             cursor.execute("SELECT * FROM generos")
-            return render_template('registro_paso2.html',
-                                   generos=cursor.fetchall(),
-                                   error="Por favor, selecciona al menos 3 categorías para continuar.")
+            todos = cursor.fetchall()
+            conn.close()
+            return render_template('registro_paso2.html', generos=todos, error="Selecciona al menos 3 categorías.")
 
-        # Si pasa la validación, guardamos en la base de datos
         try:
+            cursor.execute("DELETE FROM preferencias_usuario WHERE id_usuario = %s", (uid,))
             for gid in generos_seleccionados:
                 cursor.execute("INSERT INTO preferencias_usuario (id_usuario, id_genero) VALUES (%s, %s)", (uid, gid))
             conn.commit()
-            return redirect(url_for('vista_inicio')) # O a tu ruta de bienvenida
+            return redirect(url_for('vista_inicio'))
         except Exception as e:
             conn.rollback()
-            return render_template('registro_paso2.html', error="Error al guardar preferencias.")
+            logging.error(f"Error guardando preferencias: {e}")
+            cursor.execute("SELECT * FROM generos")
+            todos = cursor.fetchall()
+            return render_template('registro_paso2.html', generos=todos, error="Error interno al guardar.")
         finally:
             conn.close()
 
@@ -199,7 +242,6 @@ def vista_registro_paso2():
     conn.close()
     return render_template('registro_paso2.html', generos=todos_generos)
 
-
 @app.route('/login', methods=['GET', 'POST'])
 def vista_login():
     if request.method == 'POST':
@@ -207,24 +249,21 @@ def vista_login():
         password = request.form.get('password')
 
         conn = conectar_bd()
-        cursor = conn.cursor(dictionary=True)
+        if conn:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("SELECT id_usuarios, nombre_usuario, contraseña FROM usuarios WHERE email = %s", (email,))
+            usuario = cursor.fetchone()
+            conn.close()
 
-        cursor.execute("SELECT id_usuarios, nombre_usuario, contraseña FROM usuarios WHERE email = %s", (email,))
-        usuario = cursor.fetchone()
-        conn.close()
-
-        if usuario and check_password_hash(usuario['contraseña'], password):
-            # Login exitoso: Limpiamos sesión vieja y creamos la nueva
-            session.clear()
-            session['id_usuario'] = usuario['id_usuarios']
-            session['nombre_usuario'] = usuario['nombre_usuario']
-
-            # Redirigimos al inicio, que se encargará de verificar si tiene los 3 géneros
-            return redirect(url_for('vista_inicio'))
+            if usuario and check_password_hash(usuario['contraseña'], password):
+                session.clear()
+                session['id_usuario'] = usuario['id_usuarios']
+                session['nombre_usuario'] = usuario['nombre_usuario']
+                return redirect(url_for('vista_inicio'))
 
         return render_template('login.html', error="Credenciales incorrectas")
-
     return render_template('login.html')
+
 @app.route('/logout')
 def logout():
     session.clear()
@@ -236,58 +275,52 @@ def vista_buscar():
     genero = request.args.get('genero', '')
     orden = request.args.get('orden', 'relevance')
 
-    libros_resultado = []
+    cache_key = f"{query}_{genero}_{orden}".lower()
 
-    if query or genero:
-        if query and genero:
-            full_query = f"{query} + subject:{genero}"
-        elif genero:
-            full_query = f"subject:{genero}"
-        else:
-            full_query = query
+    if cache_key in cache_busquedas:
+        libros_resultado = cache_busquedas[cache_key]
+    else:
+        libros_resultado = []
+        if query or genero:
+            if query and genero: full_query = f"{query} + subject:{genero}"
+            elif genero: full_query = f"subject:{genero}"
+            else: full_query = query
 
-        params = {
-            'q': full_query,
-            'orderBy': orden,
-            'maxResults': 24,
-            'langRestrict': 'es',
-            'printType': 'books'
-        }
+            params = {
+                'q': full_query,
+                'orderBy': orden,
+                'maxResults': 24,
+                'langRestrict': 'es',
+                'printType': 'books'
+            }
 
-        url = "https://www.googleapis.com/books/v1/volumes"
-
-        try:
-            resp = requests.get(url, params=params, timeout=5)
-            if resp.status_code == 200:
-                data = resp.json()
-                for item in data.get('items', []):
-                    vol = item.get('volumeInfo', {})
-                    libros_resultado.append({
-                        'google_id': item.get('id'),
-                        'titulo': vol.get('title', 'Sin título'),
-                        'autor': ", ".join(vol.get('authors', ['Desconocido'])),
-                        'portada': vol.get('imageLinks', {}).get('thumbnail'),
-                        'sinopsis': vol.get('description', ''),
-                        'categorias': vol.get('categories', [])
-                    })
-        except Exception as e:
-            print(f"Error en búsqueda: {e}")
+            url = "https://www.googleapis.com/books/v1/volumes"
+            try:
+                resp = requests.get(url, params=params, timeout=5)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    for item in data.get('items', []):
+                        vol = item.get('volumeInfo', {})
+                        libros_resultado.append({
+                            'google_id': item.get('id'),
+                            'titulo': vol.get('title', 'Sin título'),
+                            'autor': ", ".join(vol.get('authors', ['Desconocido'])),
+                            'portada': vol.get('imageLinks', {}).get('thumbnail'),
+                            'sinopsis': vol.get('description', ''),
+                            'categorias': vol.get('categories', [])
+                        })
+                    if libros_resultado:
+                        cache_busquedas[cache_key] = libros_resultado
+            except Exception as e:
+                logging.error(f"Error en búsqueda API: {e}")
 
     generos_lista = ["Ficción", "Misterio", "Terror", "Romance", "Ciencia Ficción", "Fantasía", "Historia", "Biografía", "Infantil", "Autoayuda"]
-
-    return render_template('buscar.html',
-                           libros=libros_resultado,
-                           query=query,
-                           genero_sel=genero,
-                           orden_sel=orden,
-                           generos=generos_lista)
+    return render_template('buscar.html', libros=libros_resultado, query=query, genero_sel=genero, orden_sel=orden, generos=generos_lista)
 
 @app.route('/mis-libros')
 def vista_mis_libros():
-
     if 'id_usuario' not in session:
         return redirect(url_for('vista_login'))
-
 
     filtro_estado = request.args.get('estado')
     libros_guardados = []
@@ -296,10 +329,9 @@ def vista_mis_libros():
     if conn:
         try:
             cursor = conn.cursor(dictionary=True)
-
-
             sql = """
-                SELECT l.*, ul.estado FROM libros l
+                SELECT l.*, ul.estado, ul.sentimiento 
+                FROM libros l
                 JOIN usuarios_libros ul ON l.id_libros = ul.id_libro
                 WHERE ul.id_usuario = %s
             """
@@ -320,71 +352,8 @@ def vista_mis_libros():
 
     return render_template('mis_libros.html', libros=libros_guardados, filtro=filtro_estado)
 
-
-# ==========================================
-# 2. LÓGICA DE NEGOCIO
-# ==========================================
-
-def buscar_en_bd(termino):
-    conn = conectar_bd()
-    if not conn: return []
-    try:
-        cursor = conn.cursor(dictionary=True)
-        sql = "SELECT * FROM libros WHERE titulo LIKE %s OR autor LIKE %s"
-        patron = f"%{termino}%"
-        cursor.execute(sql, (patron, patron))
-        resultados = cursor.fetchall()
-
-        libros_locales = []
-        for row in resultados:
-            libros_locales.append({
-                'id_libros': row.get('id_libros'),
-                'google_id': row.get('google_id'),
-                'titulo': row.get('titulo'),
-                'autor': row.get('autor'),
-                'fecha': row.get('fecha'),
-                'sinopsis': row.get('sinopsis') or row.get('sinopsis'),
-                'portada': row.get('portada_url') or row.get('portada'),
-                'origen': '🏠 LOCAL (MySQL)'
-            })
-        return libros_locales
-    except Exception as e:
-        return []
-    finally:
-        if conn: conn.close()
-
-def buscar_en_google(termino_busqueda):
-    query_encoded = urllib.parse.quote(termino_busqueda)
-    url = f"https://www.googleapis.com/books/v1/volumes?q={query_encoded}&maxResults=15&printType=books"
-    headers = {'User-Agent': 'BookRadarApp/2.0'}
-    try:
-        respuesta = requests.get(url, headers=headers, timeout=8)
-        if respuesta.status_code == 200:
-            datos = respuesta.json()
-            libros_limpios = []
-            if 'items' in datos:
-                for item in datos['items']:
-                    vol = item.get('volumeInfo', {})
-                    libros_limpios.append({
-                        'google_id': item.get('id'),
-                        'titulo': vol.get('title', 'Sin título'),
-                        'autor': vol.get('authors', ['Desconocido'])[0],
-                        'fecha': vol.get('publishedDate', 'S/F'),
-                        'sinopsis': vol.get('sinopsis', 'Sin sinopsis'),
-                        'portada': vol.get('imageLinks', {}).get('thumbnail'),
-                        'origen': ' INTERNET (Google)'
-                    })
-            return libros_limpios
-        elif respuesta.status_code == 429:
-            return "Límite de API alcanzado. Espera un momento."
-        return []
-    except Exception:
-        return []
-
-
 @app.route('/perfil')
 def vista_perfil():
-    """Carga el perfil con el análisis visual de géneros leídos"""
     if 'id_usuario' not in session:
         return redirect(url_for('vista_login'))
 
@@ -406,21 +375,16 @@ def vista_perfil():
 
     try:
         cursor = conn.cursor(dictionary=True)
-
-        # Obtener datos del usuario
-        cursor.execute("SELECT nombre_usuario, email FROM Usuarios WHERE id_usuarios = %s", (user_id,))
+        cursor.execute("SELECT nombre_usuario, email FROM usuarios WHERE id_usuarios = %s", (user_id,))
         res_user = cursor.fetchone()
         if res_user: usuario = res_user
 
-        # Obtener géneros para la sección de intereses
         cursor.execute("SELECT * FROM generos")
         generos = cursor.fetchall()
 
         cursor.execute("SELECT id_genero FROM preferencias_usuario WHERE id_usuario = %s", (user_id,))
         favoritos = [f['id_genero'] for f in cursor.fetchall()]
 
-        # ANALIZAR GÉNEROS PARA EL GRÁFICO
-        # Solo contamos los libros que el usuario ha marcado como 'LEIDO'
         sql_stats = """
             SELECT l.categorias 
             FROM usuarios_libros ul
@@ -438,122 +402,95 @@ def vista_perfil():
                     if cat and cat.lower() != 'general':
                         conteo[cat] += 1
 
-            # Tomamos los 5 géneros más comunes para el gráfico
             top_5 = conteo.most_common(5)
             stats['total_leidos'] = len(libros_leidos)
             stats['labels_grafico'] = [t[0] for t in top_5]
             stats['data_grafico'] = [t[1] for t in top_5]
-
-            if top_5:
-                stats['top_genero'] = top_5[0][0]
+            if top_5: stats['top_genero'] = top_5[0][0]
 
     except Exception as e:
-        print(f"Error cargando estadísticas: {e}")
+        logging.error(f"Error cargando estadísticas: {e}")
     finally:
         if conn: conn.close()
 
     return render_template('perfil.html', usuario=usuario, generos=generos, favoritos=favoritos, stats=stats)
 
-
-# Vista de recomendaciones híbridas
-
 @app.route('/recomendaciones')
 def vista_recomendaciones():
-    """
-    Genera recomendaciones híbridas basadas en:
-    1. Géneros marcados en el perfil.
-    2. Categorías de libros leídos.
-    3. Categorías de libros puntuados con 4 o 5 estrellas.
-    """
     if 'id_usuario' not in session:
         return redirect(url_for('vista_login'))
 
     user_id = session['id_usuario']
-    intereses = set()
-
     conn = conectar_bd()
     if not conn: return "Error de conexión", 500
 
+    recomendaciones = []
+    terminos_busqueda = []
+
     try:
         cursor = conn.cursor(dictionary=True)
-
-        # 1. Géneros explícitos (preferencias del perfil)
-        cursor.execute("""
-            SELECT g.nombre_genero 
-            FROM preferencias_usuario pu
-            JOIN generos g ON pu.id_genero = g.id_genero 
-            WHERE pu.id_usuario = %s
-        """, (user_id,))
-        for row in cursor.fetchall():
-            intereses.add(row['nombre_genero'])
-
-        # 2. Categorías de libros leídos o bien puntuados con 4 o 5 estrellas
-        cursor.execute("""
-            SELECT l.categorias 
+        sql_ia = """
+            SELECT l.autor 
             FROM usuarios_libros ul
             JOIN libros l ON ul.id_libro = l.id_libros
-            WHERE ul.id_usuario = %s 
-            AND (ul.estado = 'LEIDO' OR ul.calificacion >= 4)
-            AND l.categorias IS NOT NULL
-        """, (user_id,))
+            WHERE ul.id_usuario = %s AND ul.sentimiento = 'Positiva'
+            GROUP BY l.autor
+            ORDER BY MAX(ul.fecha_guardado) DESC 
+            LIMIT 2
+            """
+        cursor.execute(sql_ia, (user_id,))
+        autores_top = [r['autor'] for r in cursor.fetchall()]
+        for autor in autores_top:
+            terminos_busqueda.append(f"inauthor:{autor}")
 
-        for row in cursor.fetchall():
-            # Cada libro puede tener varias categorías separadas por comas, las procesamos individualmente
-            categorias_lista = [c.strip() for c in row['categorias'].split(',')]
-            for cat in categorias_lista:
-                if cat and cat != 'General':
-                    intereses.add(cat)
+        if len(terminos_busqueda) < 2:
+            cursor.execute("""
+                SELECT g.nombre_genero FROM preferencias_usuario pu
+                JOIN generos g ON pu.id_genero = g.id_genero 
+                WHERE pu.id_usuario = %s LIMIT 2
+            """, (user_id,))
+            for row in cursor.fetchall():
+                terminos_busqueda.append(f"subject:{row['nombre_genero']}")
 
-        # 3. Obtener los google_id de los libros que el usuario ya tiene en su biblioteca para no recomendarlos
-        cursor.execute("""
-            SELECT l.google_id 
-            FROM usuarios_libros ul
-            JOIN libros l ON ul.id_libro = l.id_libros 
-            WHERE ul.id_usuario = %s
-        """, (user_id,))
-        libros_ignorados = [r['google_id'] for r in cursor.fetchall()]
+        cursor.execute("SELECT l.google_id FROM usuarios_libros ul JOIN libros l ON ul.id_libro = l.id_libros WHERE ul.id_usuario = %s", (user_id,))
+        ignorados = [r['google_id'] for r in cursor.fetchall()]
 
-    except mysql.connector.Error as err:
-        logging.error(f"Error recuperando intereses: {err}")
     finally:
         conn.close()
 
-    # Si el usuario no tiene intereses claros, usamos algunos por defecto para no mostrar una página vacía
-    if not intereses:
-        intereses = {"Ficción", "Aventura", "Best-sellers"}
+    if not terminos_busqueda:
+        terminos_busqueda = ["subject:fiction", "subject:novedades"]
 
-    # Selección aleatoria de intereses para dinamismo (máximo 3)
-    terminos_clave = random.sample(list(intereses), min(len(intereses), 3))
-    query_api = " + ".join(terminos_clave)
-    recomendaciones = []
+    for query in terminos_busqueda:
+        query_encoded = urllib.parse.quote(query)
+        url = f"https://www.googleapis.com/books/v1/volumes?q={query_encoded}&maxResults=10&orderBy=relevance&printType=books&langRestrict=es"
+        try:
+            respuesta = requests.get(url, timeout=8)
+            if respuesta.status_code == 200:
+                for item in respuesta.json().get('items', []):
+                    vol = item.get('volumeInfo', {})
+                    if item.get('id') not in ignorados:
+                        img_links = vol.get('imageLinks', None)
+                        if img_links and 'thumbnail' in img_links:
+                            portada_url = img_links['thumbnail'].replace('http://', 'https://').replace('&zoom=5', '&zoom=1')
+                        else:
+                            portada_url = ""
 
-    try:
-        # Llamada a la API de Google Books con los términos clave generados
-        url = f"https://www.googleapis.com/books/v1/volumes?q={urllib.parse.quote(query_api)}&maxResults=20&langRestrict=es"
-        resp = requests.get(url, timeout=5)
+                        recomendaciones.append({
+                            'google_id': item.get('id'),
+                            'titulo': vol.get('title', 'Sin título'),
+                            'autor': vol.get('authors', ['Desconocido'])[0] if vol.get('authors') else 'Desconocido',
+                            'portada': portada_url,
+                            'genero_origen': query.replace('subject:', 'Género ').replace('inauthor:', 'Autor ')
+                        })
+        except Exception as e:
+            logging.error(f"Error recomendaciones: {e}")
 
-        if resp.status_code == 200:
-            for item in resp.json().get('items', []):
-                v = item.get('volumeInfo', {})
-                gid = item.get('id')
-
-                # Filtramos para no recomendar libros que el usuario ya tiene en su biblioteca
-                if gid not in libros_ignorados:
-                    recomendaciones.append({
-                        'google_id': gid,
-                        'titulo': v.get('title'),
-                        'autor': ", ".join(v.get('authors', ['Desconocido'])),
-                        'portada': v.get('imageLinks', {}).get('thumbnail'),
-                        'genero_origen': terminos_clave[0] # Contexto de la recomendación
-                    })
-    except Exception as e:
-        logging.error(f"Error llamando a Google API: {e}")
-
-    return render_template('recomendaciones.html', recomendaciones=recomendaciones[:12])
+    random.shuffle(recomendaciones)
+    return render_template('recomendaciones.html', recomendaciones=recomendaciones[:15])
 
 @app.route('/libro/<google_id>')
 def vista_detalle_libro(google_id):
-
     url = f"https://www.googleapis.com/books/v1/volumes/{google_id}"
     libro_detalle = None
 
@@ -566,20 +503,19 @@ def vista_detalle_libro(google_id):
                 'google_id': item.get('id'),
                 'titulo': vol.get('title', 'Sin título'),
                 'autor': ", ".join(vol.get('authors', ['Desconocido'])),
-                'fecha': vol.get('fecha', 'S/F'),
+                'fecha': vol.get('publishedDate', 'S/F'),
                 'descripcion': vol.get('description', 'Sin descripción'),
                 'paginas': vol.get('pageCount', '---'),
                 'categorias': ", ".join(vol.get('categories', ['General'])),
                 'portada': vol.get('imageLinks', {}).get('large') or vol.get('imageLinks', {}).get('thumbnail'),
                 'editorial': vol.get('publisher', 'Desconocida'),
-                'isbn': vol.get('industryIdentifiers', [{}])[0].get('identifier', '---')
+                'isbn': vol.get('industryIdentifiers', [{}])[0].get('identifier', '---') if vol.get('industryIdentifiers') else '---'
             }
     except Exception as e:
-        logging.error(f"Error: {e}")
+        logging.error(f"Error detalle libro: {e}")
 
     if not libro_detalle: return render_template('404.html'), 404
 
-    # Si el usuario está logueado, buscamos si ya tiene este libro en su biblioteca para mostrar estado, calificación y comentario
     estado_actual = None
     calificacion_actual = 0
     comentario_actual = ""
@@ -589,7 +525,6 @@ def vista_detalle_libro(google_id):
         if conn:
             try:
                 cursor = conn.cursor(dictionary=True)
-                # Buscamos el estado, calificación y comentario del libro para este usuario
                 sql = """
                     SELECT ul.estado, ul.calificacion, ul.comentario 
                     FROM usuarios_libros ul 
@@ -605,46 +540,38 @@ def vista_detalle_libro(google_id):
             finally:
                 conn.close()
 
-    return render_template('detalles.html',
-                           libro=libro_detalle,
-                           estado=estado_actual,
-                           calificacion=calificacion_actual,
-                           comentario=comentario_actual)
+    return render_template('detalles.html', libro=libro_detalle, estado=estado_actual, calificacion=calificacion_actual, comentario=comentario_actual)
 
-# Endpoint para guardar la reseña (comentario) del usuario sobre un libro específico
+
+# ==========================================
+# 3. ENDPOINTS API (JSON)
+# ==========================================
+
 @app.route('/api/guardar-resena', methods=['POST'])
 def api_guardar_resena():
     if 'id_usuario' not in session: return jsonify({'status': 'error'}), 401
 
     datos = request.json
     google_id = datos.get('google_id')
-    # Permitimos que el frontend envíe el comentario con cualquiera de las dos claves para flexibilidad
     comentario = datos.get('resena') or datos.get('comentario')
 
     conn = conectar_bd()
     try:
         cursor = conn.cursor()
-        # Primero, buscamos el ID del libro en nuestra base de datos usando el google_id
         cursor.execute("SELECT id_libros FROM libros WHERE google_id = %s", (google_id,))
         libro = cursor.fetchone()
 
         if not libro:
             return jsonify({'status': 'error', 'mensaje': 'Libro no encontrado en BD'}), 404
 
-        # Luego, actualizamos el comentario para ese libro y usuario específico
         sql = "UPDATE usuarios_libros SET comentario = %s WHERE id_usuario = %s AND id_libro = %s"
         cursor.execute(sql, (comentario, session['id_usuario'], libro[0]))
         conn.commit()
-        return jsonify({'status': 'success', 'mensaje': 'Opinión guardada'})
+        return jsonify({'status': 'success'})
     except Exception as e:
         return jsonify({'status': 'error', 'mensaje': str(e)}), 500
     finally:
         conn.close()
-
-
-# ==========================================
-# 3. ENDPOINTS API (JSON)
-# ==========================================
 
 @app.route('/api/guardar-libro', methods=['POST'])
 def api_guardar():
@@ -653,8 +580,26 @@ def api_guardar():
 
     datos = request.json
     estado = datos.get('estado')
+    id_usuario = session.get('id_usuario')
+    comentario = datos.get('comentario') or datos.get('resena') or ''
 
-    res = guardar_libro_en_bd(datos, session['id_usuario'], estado)
+    res = guardar_libro_en_bd(datos, id_usuario, estado)
+
+    resultado_ia = None
+    if res.get('status') == 'success' and comentario:
+        resultado_ia = analizar_sentimiento(comentario)
+        try:
+            db = conectar_bd()
+            cursor = db.cursor()
+            id_libro_db = res.get('id_libro_db')
+            sql = "UPDATE usuarios_libros SET sentimiento = %s WHERE id_usuario = %s AND id_libro = %s"
+            cursor.execute(sql, (resultado_ia, id_usuario, id_libro_db))
+            db.commit()
+            db.close()
+        except:
+            pass
+
+    res['sentimiento_ia'] = resultado_ia or 'Neutral'
     return jsonify(res)
 
 @app.route('/api/eliminar-libro/<int:id_libro>', methods=['DELETE'])
@@ -679,9 +624,15 @@ def api_registro():
         cursor = conn.cursor()
         sql = "INSERT INTO usuarios (nombre_usuario, email, contraseña) VALUES (%s, %s, %s)"
         cursor.execute(sql, (datos.get('usuario'), datos.get('email'), hash_pass))
+        uid = cursor.lastrowid
         conn.commit()
+
+        session.clear()
+        session['id_usuario'] = uid
+        session['nombre_usuario'] = datos.get('usuario')
+
         return jsonify({'status': 'success'})
-    except mysql.connector.Error as err:
+    except mysql.connector.Error:
         return jsonify({'status': 'error', 'mensaje': 'Email ya existe'}), 409
     finally:
         if conn: conn.close()
@@ -699,20 +650,13 @@ def api_login():
         cursor.execute(sql, (email,))
         usuario_db = cursor.fetchone()
         if usuario_db and check_password_hash(usuario_db['contraseña'], password):
+            session.clear()
             session['id_usuario'] = usuario_db['id_usuarios']
             session['nombre_usuario'] = usuario_db['nombre_usuario']
             return jsonify({'status': 'success', 'id_usuario': usuario_db['id_usuarios']})
         return jsonify({'status': 'error', 'mensaje': 'Acceso denegado'}), 401
     finally:
         if conn: conn.close()
-
-@app.route('/api/test-db')
-def test_db():
-    conn = conectar_bd()
-    if conn:
-        conn.close()
-        return jsonify({"servidor": "activo", "mysql": "conectado"})
-    return jsonify({"servidor": "activo", "mysql": "error"}), 500
 
 @app.route('/api/perfil/actualizar', methods=['POST'])
 def api_perfil_actualizar():
@@ -721,36 +665,30 @@ def api_perfil_actualizar():
     datos = request.json
     nuevo_nombre = datos.get('usuario')
     nuevo_email = datos.get('email')
-    nueva_pass = datos.get('password')  # <--- Asegúrate que el JS envíe 'password'
+    nueva_pass = datos.get('password')
 
     conn = conectar_bd()
     try:
         cursor = conn.cursor()
 
         if nueva_pass and nueva_pass.strip() != "":
-            # CASO A: Hay contraseña nueva
-            print("DEBUG: Actualizando con nueva contraseña")
             hash_pass = generate_password_hash(nueva_pass)
             sql = "UPDATE usuarios SET nombre_usuario=%s, email=%s, contraseña=%s WHERE id_usuarios=%s"
             cursor.execute(sql, (nuevo_nombre, nuevo_email, hash_pass, session['id_usuario']))
         else:
-            # CASO B: No hay contraseña (solo datos básicos)
-            print("DEBUG: Actualizando solo nombre y email")
             sql = "UPDATE usuarios SET nombre_usuario=%s, email=%s WHERE id_usuarios=%s"
             cursor.execute(sql, (nuevo_nombre, nuevo_email, session['id_usuario']))
 
         conn.commit()
         session['nombre_usuario'] = nuevo_nombre
-        return jsonify({'status': 'success', 'mensaje': 'Datos actualizados correctamente'})
+        return jsonify({'status': 'success'})
     except Exception as e:
-        print(f"Error en update: {e}")
         return jsonify({'status': 'error', 'mensaje': str(e)}), 500
     finally:
         conn.close()
 
 @app.route('/api/preferencias', methods=['POST'])
 def api_perfil_preferencias():
-
     if 'id_usuario' not in session: return jsonify({'status': 'error'}), 401
 
     generos_seleccionados = request.json.get('generos', [])
@@ -759,16 +697,14 @@ def api_perfil_preferencias():
     conn = conectar_bd()
     try:
         cursor = conn.cursor()
-        # 1. Eliminamos las preferencias anteriores del usuario para evitar duplicados o conflictos
         cursor.execute("DELETE FROM preferencias_usuario WHERE id_usuario = %s", (user_id,))
-        # 2. Insertamos las nuevas preferencias seleccionadas por el usuario
         if generos_seleccionados:
             sql = "INSERT INTO preferencias_usuario (id_usuario, id_genero) VALUES (%s, %s)"
             datos_ins = [(user_id, g_id) for g_id in generos_seleccionados]
             cursor.executemany(sql, datos_ins)
 
         conn.commit()
-        return jsonify({'status': 'success', 'mensaje': 'Preferencias guardadas'})
+        return jsonify({'status': 'success'})
     except Exception as e:
         return jsonify({'status': 'error', 'mensaje': str(e)}), 500
     finally: conn.close()
@@ -778,14 +714,23 @@ def eliminar_cuenta():
     if 'id_usuario' not in session: return redirect(url_for('vista_inicio'))
     uid = session['id_usuario']
     conn = conectar_bd()
-    cursor = conn.cursor()
-    cursor.execute("SET FOREIGN_KEY_CHECKS = 0;")
-    cursor.execute("DELETE FROM usuarios WHERE id_usuarios = %s", (uid,))
-    cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")
-    conn.commit()
-    conn.close()
+    if conn:
+        cursor = conn.cursor()
+        cursor.execute("SET FOREIGN_KEY_CHECKS = 0;")
+        cursor.execute("DELETE FROM usuarios WHERE id_usuarios = %s", (uid,))
+        cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")
+        conn.commit()
+        conn.close()
     session.clear()
     return redirect(url_for('vista_inicio'))
+
+@app.errorhandler(404)
+def pagina_no_encontrada(e):
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def error_interno_servidor(e):
+    return render_template('404.html', mensaje="Error interno del radar"), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
