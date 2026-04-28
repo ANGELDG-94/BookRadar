@@ -2,11 +2,11 @@
 
 {% block content %}
 <div class="content-wrapper" style="max-width: 1000px; margin: 2rem auto; padding: 0 1rem;">
-    <div style="display: flex; flex-wrap: wrap; gap: 3rem; background: white; padding: 2.5rem; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05);">
+    <div class="detalle-contenedor" style="display: flex; flex-wrap: wrap; gap: 3rem; background: white; padding: 2.5rem; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05);">
 
-        <div style="flex: 1; min-width: 300px;">
+        <div class="col-izq" style="flex: 1; min-width: 300px;">
 
-            <div style="border-radius: 15px; overflow: hidden; box-shadow: 0 15px 30px rgba(0,0,0,0.15); background: #F8FAFC; position: relative; height: 450px;">
+            <div class="img-portada" style="border-radius: 15px; overflow: hidden; box-shadow: 0 15px 30px rgba(0,0,0,0.15); background: #F8FAFC; position: relative; height: 450px;">
 
                 {% set url_img = libro.portada or libro.portada_url %}
 
@@ -55,24 +55,24 @@
                 </div>
 
                 <h4 style="margin-bottom: 0.5rem; font-size: 0.8rem; color: #64748B; letter-spacing: 0.05em; text-transform: uppercase;">Mi reseña personal</h4>
-                <textarea id="resena-texto" placeholder="¿Qué te ha parecido?" style="width: 100%; min-height: 80px; padding: 10px; border: 1px solid #E2E8F0; border-radius: 8px; font-family: inherit; font-size: 0.9rem; resize: none; margin-bottom: 10px;">{{ comentario or '' }}</textarea>
+                <textarea id="resena-texto" placeholder="¿Qué te ha parecido?" style="width: 100%; box-sizing: border-box; min-height: 80px; padding: 10px; border: 1px solid #E2E8F0; border-radius: 8px; font-family: inherit; font-size: 0.9rem; resize: none; margin-bottom: 10px;">{{ comentario or '' }}</textarea>
                 <button onclick="guardarResena()" class="btn-det" style="background: #1E293B; color: white; border: none; font-size: 0.85rem; padding: 10px;">Guardar opinión</button>
                 <p id="rating-status" style="font-size: 0.75rem; color: #94A3B8; margin-top: 8px; text-align: center;">Puntúa tu lectura</p>
             </div>
             {% endif %}
         </div>
 
-        <div style="flex: 2; min-width: 350px;">
+        <div class="col-der" style="flex: 2; min-width: 350px;">
             <nav style="margin-bottom: 1.5rem;">
                 <a href="javascript:history.back()" style="color: #3B82F6; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 5px;">
                     <span>←</span> Volver al radar
                 </a>
             </nav>
 
-            <h1 style="font-size: 2.2rem; color: #1E293B; margin-bottom: 0.5rem; font-weight: 800; line-height: 1.2;">{{ libro.titulo }}</h1>
-            <p style="font-size: 1.2rem; color: #3B82F6; font-weight: 600; margin-bottom: 2rem;">{{ libro.autor }}</p>
+            <h1 class="detalle-titulo" style="font-size: 2.2rem; color: #1E293B; margin-bottom: 0.5rem; font-weight: 800; line-height: 1.2;">{{ libro.titulo }}</h1>
+            <p class="detalle-autor" style="font-size: 1.2rem; color: #3B82F6; font-weight: 600; margin-bottom: 2rem;">{{ libro.autor }}</p>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem; background: #F1F5F9; padding: 1rem; border-radius: 10px; font-size: 0.85rem;">
+            <div class="detalle-info-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem; background: #F1F5F9; padding: 1rem; border-radius: 10px; font-size: 0.85rem;">
                 <div><strong style="color: #64748B;">Páginas:</strong> {{ libro.paginas }}</div>
                 <div><strong style="color: #64748B;">Fecha:</strong> {{ libro.fecha }}</div>
                 <div><strong style="color: #64748B;">Editorial:</strong> {{ libro.editorial }}</div>
@@ -80,7 +80,7 @@
             </div>
 
             <h3 style="font-size: 1.1rem; margin-bottom: 1rem; color: #1E293B; border-bottom: 2px solid #F1F5F9; padding-bottom: 5px; display: inline-block;">Sinopsis</h3>
-            <div style="line-height: 1.8; color: #475569; text-align: justify; font-size: 1rem;">
+            <div class="detalle-sinopsis" style="line-height: 1.8; color: #475569; text-align: justify; font-size: 1rem;">
                 {{ libro.descripcion | safe }}
             </div>
         </div>
@@ -89,10 +89,39 @@
 
 <style>
     @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-    .btn-det { padding: 12px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: all 0.2s; width: 100%; font-size: 0.9rem; text-align: center; }
+    .btn-det { padding: 12px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: all 0.2s; width: 100%; font-size: 0.9rem; text-align: center; box-sizing: border-box; }
     .btn-det:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
     .star.active { color: #F59E0B; }
     .star:hover { transform: scale(1.2); transition: transform 0.1s; }
+
+    /* REGLAS RESPONSIVE PARA MÓVILES */
+    @media (max-width: 768px) {
+        .detalle-contenedor {
+            padding: 1.5rem !important; /* Reduce el espacio en blanco exterior */
+            gap: 1.5rem !important; /* Acerca la foto al texto */
+        }
+        .col-izq, .col-der {
+            min-width: 100% !important; /* Fuerza a que ocupen todo el ancho del móvil */
+        }
+        .img-portada {
+            height: 320px !important; /* Hace la portada más pequeña en móvil */
+        }
+        .detalle-titulo {
+            font-size: 1.6rem !important; /* Achica el título principal */
+        }
+        .detalle-autor {
+            font-size: 1rem !important; /* Achica el autor */
+            margin-bottom: 1.2rem !important;
+        }
+        .detalle-info-grid {
+            grid-template-columns: 1fr !important; /* Pasa de 2 columnas a 1 para los datos del libro */
+            gap: 0.6rem !important;
+        }
+        .detalle-sinopsis {
+            font-size: 0.95rem !important; /* Ajusta un pelín el texto para mejor lectura */
+            text-align: left !important; /* En móvil el texto justificado suele dejar huecos raros */
+        }
+    }
 </style>
 
 <script>

@@ -16,7 +16,7 @@ Archivos de configuración de IntelliJ IDEA
 .idea/
 *.iml
 
-Archivos con contraseñas o variables de entorno (por si lo usas en el futuro)
+Archivos con contraseñas o variables de entorno
 
 .env
 

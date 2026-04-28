@@ -2,6 +2,7 @@ import logging
 import os
 import random
 import urllib.parse
+import time
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from textblob import TextBlob
@@ -19,6 +20,8 @@ logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'super_secreta_bookradar_2026_clave_unica')
 
+GOOGLE_BOOKS_API_KEY = "AIzaSyCTkUyHM5QvhUFOKFParTYIMBgevfUS1Kc"
+
 cache_busquedas = {}
 
 # ==========================================
@@ -26,8 +29,11 @@ cache_busquedas = {}
 # ==========================================
 
 def fetch_books_category(query, order="relevance", max_results=10):
+    time.sleep(0.3)
+
     url = "https://www.googleapis.com/books/v1/volumes"
-    params = {'q': query, 'orderBy': order, 'maxResults': max_results, 'langRestrict': 'es', 'printType': 'books'}
+    params = {'q': query, 'orderBy': order, 'maxResults': max_results, 'langRestrict': 'es', 'printType': 'all', 'key': GOOGLE_BOOKS_API_KEY}
+
     try:
         resp = requests.get(url, params=params, timeout=5)
         if resp.status_code == 200:
@@ -50,6 +56,10 @@ def fetch_books_category(query, order="relevance", max_results=10):
                     'puntuacion': vol.get('averageRating', 0)
                 })
             return libros
+        else:
+            logging.error(f"Google API Error {resp.status_code} para query '{query}'")
+            return []
+
     except Exception as e:
         logging.error(f"Error fetch_books_category: {e}")
     return []
@@ -121,11 +131,12 @@ def analizar_sentimiento(comentario):
         return "Neutral"
 
 # ==========================================
-# 1. RUTAS DE NAVEGACIÓN (Vistas HTML)
+# RUTAS DE NAVEGACIÓN (Vistas HTML)
 # ==========================================
 
 @app.route('/')
 def vista_inicio():
+
     if 'id_usuario' in session:
         uid = session['id_usuario']
         conn = conectar_bd()
@@ -137,11 +148,13 @@ def vista_inicio():
             if conteo < 3:
                 return redirect(url_for('vista_registro_paso2'))
 
+
     secciones_config = [
-        {"id": "tendencias", "titulo": "Novedades y Tendencias", "query": "subject:fiction", "order": "newest"},
-        {"id": "misterio", "titulo": "Misterio y Suspense", "query": "subject:mystery", "order": "relevance"},
-        {"id": "clasicos", "titulo": "Clásicos Imprescindibles", "query": "subject:classic+literature", "order": "relevance"}
+        {"id": "premios", "titulo": "Premios Planeta", "query": "Premio Planeta", "order": "newest"},
+        {"id": "misterio", "titulo": "Misterio y Suspense", "query": "subject:misterio", "order": "relevance"},
+        {"id": "clasicos", "titulo": "Clásicos Imprescindibles", "query": "inpublisher:alba", "order": "relevance"}
     ]
+
 
     if 'id_usuario' in session:
         conn = conectar_bd()
@@ -164,14 +177,22 @@ def vista_inicio():
                     "order": "relevance"
                 })
 
+
     secciones_datos = {}
-    with ThreadPoolExecutor() as executor:
-        futuros = {executor.submit(fetch_books_category, s["query"], s["order"], 12): s["id"] for s in secciones_config}
+
+    with ThreadPoolExecutor(max_workers=4) as executor:
+
+        futuros = {
+            executor.submit(fetch_books_category, s["query"], s["order"], 12): s["id"]
+            for s in secciones_config
+        }
+
         for futuro in as_completed(futuros):
             cat_id = futuros[futuro]
             try:
                 secciones_datos[cat_id] = futuro.result()
-            except:
+            except Exception as e:
+                logging.error(f"Error en hilo de sección {cat_id}: {e}")
                 secciones_datos[cat_id] = []
 
     return render_template('index.html', secciones=secciones_config, datos=secciones_datos)
@@ -291,28 +312,36 @@ def vista_buscar():
                 'orderBy': orden,
                 'maxResults': 24,
                 'langRestrict': 'es',
-                'printType': 'books'
+                'printType': 'books',
+                'key': GOOGLE_BOOKS_API_KEY
             }
 
             url = "https://www.googleapis.com/books/v1/volumes"
-            try:
-                resp = requests.get(url, params=params, timeout=5)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    for item in data.get('items', []):
-                        vol = item.get('volumeInfo', {})
-                        libros_resultado.append({
-                            'google_id': item.get('id'),
-                            'titulo': vol.get('title', 'Sin título'),
-                            'autor': ", ".join(vol.get('authors', ['Desconocido'])),
-                            'portada': vol.get('imageLinks', {}).get('thumbnail'),
-                            'sinopsis': vol.get('description', ''),
-                            'categorias': vol.get('categories', [])
-                        })
-                    if libros_resultado:
-                        cache_busquedas[cache_key] = libros_resultado
-            except Exception as e:
-                logging.error(f"Error en búsqueda API: {e}")
+        try:
+            resp = requests.get(url, params=params, timeout=5)
+            if resp.status_code == 200:
+                data = resp.json()
+                for item in data.get('items', []):
+                    vol = item.get('volumeInfo', {})
+                    libros_resultado.append({
+                        'google_id': item.get('id'),
+                        'titulo': vol.get('title', 'Sin título'),
+                        'autor': ", ".join(vol.get('authors', ['Desconocido'])),
+                        'portada': vol.get('imageLinks', {}).get('thumbnail'),
+                        'sinopsis': vol.get('description', ''),
+                        'categorias': vol.get('categories', []),
+                        'fecha': vol.get('publishedDate', '0000')
+                    })
+
+
+                if orden == 'newest' and libros_resultado:
+
+                    libros_resultado.sort(key=lambda x: x.get('fecha', '0000'), reverse=True)
+
+                if libros_resultado:
+                    cache_busquedas[cache_key] = libros_resultado
+        except Exception as e:
+            logging.error(f"Error en búsqueda API: {e}")
 
     generos_lista = ["Ficción", "Misterio", "Terror", "Romance", "Ciencia Ficción", "Fantasía", "Historia", "Biografía", "Infantil", "Autoayuda"]
     return render_template('buscar.html', libros=libros_resultado, query=query, genero_sel=genero, orden_sel=orden, generos=generos_lista)
@@ -463,7 +492,7 @@ def vista_recomendaciones():
 
     for query in terminos_busqueda:
         query_encoded = urllib.parse.quote(query)
-        url = f"https://www.googleapis.com/books/v1/volumes?q={query_encoded}&maxResults=10&orderBy=relevance&printType=books&langRestrict=es"
+        url = f"https://www.googleapis.com/books/v1/volumes?q={query_encoded}&maxResults=10&orderBy=relevance&printType=books&langRestrict=es&key={GOOGLE_BOOKS_API_KEY}"
         try:
             respuesta = requests.get(url, timeout=8)
             if respuesta.status_code == 200:
@@ -491,7 +520,7 @@ def vista_recomendaciones():
 
 @app.route('/libro/<google_id>')
 def vista_detalle_libro(google_id):
-    url = f"https://www.googleapis.com/books/v1/volumes/{google_id}"
+    url = f"https://www.googleapis.com/books/v1/volumes/{google_id}?key={GOOGLE_BOOKS_API_KEY}"
     libro_detalle = None
 
     try:
@@ -544,7 +573,7 @@ def vista_detalle_libro(google_id):
 
 
 # ==========================================
-# 3. ENDPOINTS API (JSON)
+#  ENDPOINTS API
 # ==========================================
 
 @app.route('/api/guardar-resena', methods=['POST'])
